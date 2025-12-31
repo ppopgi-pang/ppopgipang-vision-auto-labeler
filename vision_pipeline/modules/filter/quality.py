@@ -1,8 +1,10 @@
 from PIL import Image
 from pathlib import Path
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from modules.filter.base import FilterStep
 from domain.image import ImageItem
+from config import settings
 
 class QualityFilter(FilterStep):
     def __init__(self, config: dict):
@@ -18,44 +20,70 @@ class QualityFilter(FilterStep):
         
         print(f"[QualityFilter] Processing {len(images)} images...")
         total = len(images)
+        if total == 0:
+            return passed_images
 
-        for idx, img_item in enumerate(images, start=1):
-            print(f"[QualityFilter] Checking {idx}/{total}...", end="\r", flush=True)
+        max_workers = max(1, int(getattr(settings, "max_workers", 4)))
+        results: list[tuple[ImageItem, str, str | None]] = [None] * total
+
+        def check_one(img_item: ImageItem) -> tuple[str, str | None]:
             if not img_item.path or not Path(img_item.path).exists():
-                print(f"[QualityFilter] Path not found: {img_item.path}")
-                continue
-                
-            path = Path(img_item.path)
+                return "missing", f"[QualityFilter] Path not found: {img_item.path}"
 
-            # 파일 크기 확인
+            path = Path(img_item.path)
             try:
                 size_kb = os.path.getsize(path) / 1024
                 if size_kb < self.min_file_size_kb:
-                    # print(f"Rejected {img_item.id}: size {size_kb:.1f}KB < {self.min_file_size_kb}KB")
-                    rejected += 1
-                    continue
+                    return "rejected", None
 
-                # 차원 및 종횡비 확인
                 with Image.open(path) as pil_img:
                     width, height = pil_img.size
 
                     if width < self.min_width or height < self.min_height:
-                        # print(f"Rejected {img_item.id}: {width}x{height} < min {self.min_width}x{self.min_height}")
-                        rejected += 1
-                        continue
+                        return "rejected", None
 
                     aspect_ratio = max(width, height) / min(width, height)
                     if aspect_ratio > self.max_aspect_ratio:
-                        # print(f"Rejected {img_item.id}: AR {aspect_ratio:.2f} > {self.max_aspect_ratio}")
-                        rejected += 1
-                        continue
-                        
-                passed_images.append(img_item)
-                
+                        return "rejected", None
+
+                return "passed", None
             except Exception as e:
-                print(f"[QualityFilter] Error checking {path}: {e}")
-                rejected += 1
+                return "error", f"[QualityFilter] Error checking {path}: {e}"
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(check_one, img_item): idx
+                for idx, img_item in enumerate(images)
+            }
+            completed = 0
+            for future in as_completed(futures):
+                idx = futures[future]
+                img_item = images[idx]
+                try:
+                    status, message = future.result()
+                except Exception as e:
+                    status, message = "error", f"[QualityFilter] Error checking {img_item.path}: {e}"
+
+                results[idx] = (img_item, status, message)
+                completed += 1
+                print(f"[QualityFilter] Checking {completed}/{total}...", end="\r", flush=True)
 
         print()
+        for img_item, status, message in results:
+            if status == "passed":
+                passed_images.append(img_item)
+                continue
+
+            if status == "missing":
+                if message:
+                    print(message)
+                continue
+
+            if status == "error" and message:
+                print(message)
+                rejected += 1
+                continue
+
+            rejected += 1
         print(f"[QualityFilter] Rejected {rejected} low quality images. Kept {len(passed_images)} images.")
         return passed_images
