@@ -98,6 +98,7 @@ class DetectPipeline(PipelineStep):
                 bboxes = bbox_map.get(idx, [])  # path 없으면 빈 리스트
                 crop_paths = []
 
+                labeler_confidences = [None] * len(bboxes)
                 if bboxes and img_item.path and (self.save_crops or self.labeler or self.force_fallback_label):
                     for crop_idx, bbox in enumerate(bboxes):
                         label = bbox.label
@@ -110,7 +111,8 @@ class DetectPipeline(PipelineStep):
                         if self.labeler:
                             crop_img = crop_image_to_pil(img_item.path, bbox, padding=self.crop_padding)
                             if crop_img:
-                                label, _ = self.labeler.label_image(crop_img)
+                                label, labeler_confidence = self.labeler.label_image(crop_img)
+                                labeler_confidences[crop_idx] = labeler_confidence
                                 if self.labeler_rate_limit_delay > 0:
                                     time.sleep(self.labeler_rate_limit_delay)
                             else:
@@ -169,8 +171,9 @@ class DetectPipeline(PipelineStep):
                         {
                             "label": b.label,
                             "confidence": b.confidence,
-                            "xyxy": b.xyxy
-                        } for b in bboxes
+                            "xyxy": b.xyxy,
+                            "labeler_confidence": labeler_confidences[i],
+                        } for i, b in enumerate(bboxes)
                     ],
                     "crop_paths": crop_paths,
                     "annotated_path": annotated_path,
