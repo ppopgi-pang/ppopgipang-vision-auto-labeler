@@ -17,8 +17,10 @@ class QualityFilter(FilterStep):
         rejected = 0
         
         print(f"[QualityFilter] Processing {len(images)} images...")
+        total = len(images)
 
-        for img_item in images:
+        for idx, img_item in enumerate(images, start=1):
+            print(f"[QualityFilter] Checking {idx}/{total}...", end="\r", flush=True)
             if not img_item.path or not Path(img_item.path).exists():
                 print(f"[QualityFilter] Path not found: {img_item.path}")
                 continue
@@ -54,5 +56,6 @@ class QualityFilter(FilterStep):
                 print(f"[QualityFilter] Error checking {path}: {e}")
                 rejected += 1
 
+        print()
         print(f"[QualityFilter] Rejected {rejected} low quality images. Kept {len(passed_images)} images.")
         return passed_images

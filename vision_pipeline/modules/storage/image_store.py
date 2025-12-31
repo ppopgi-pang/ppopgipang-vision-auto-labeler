@@ -9,8 +9,11 @@ from config import settings
 class ImageStore:
     def save_raw(self, images: list[ImageItem]):
         print(f"[ImageStore] Saving {len(images)} raw images")
-        
-        for item in images:
+        saved_count = 0
+        total = len(images)
+
+        for idx, item in enumerate(images, start=1):
+            print(f"[ImageStore] Saving {idx}/{total}...", end="\r", flush=True)
             if item.path:
                 continue
                 
@@ -40,9 +43,13 @@ class ImageStore:
                         f.write(response.content)
                     
                     item.path = Path(filepath)
+                    saved_count += 1
                     # print(f"Saved {filepath}")
                 else:
                     print(f"Failed to download {item.url}: {response.status_code}")
                     
             except Exception as e:
                 print(f"Error saving image {item.url}: {e}")
+
+        print()
+        print(f"[ImageStore] Saved {saved_count}/{total} raw images")

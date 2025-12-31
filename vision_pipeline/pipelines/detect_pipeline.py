@@ -32,8 +32,10 @@ class DetectPipeline(PipelineStep):
         print(f"--- DetectPipeline Start ({len(images)} images) ---")
 
         results = []
+        total = len(images)
 
-        for img_item in images:
+        for idx, img_item in enumerate(images, start=1):
+            print(f"[DetectPipeline] Detecting {idx}/{total}...", end="\r", flush=True)
             if not img_item.path:
                 continue
 
@@ -69,6 +71,7 @@ class DetectPipeline(PipelineStep):
             }
             results.append(result_entry)
 
+        print()
         # 결과 저장
         output_path = Path("data/artifacts/bboxes.json")
         self.store.save(results, output_path)

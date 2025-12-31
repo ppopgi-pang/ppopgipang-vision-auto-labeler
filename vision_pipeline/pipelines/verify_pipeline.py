@@ -29,6 +29,8 @@ class VerifyPipeline(PipelineStep):
         print(f"--- VerifyPipeline Start ({len(detection_results)} items) ---")
 
         final_results = []
+        total_crops = sum(len(item.get("crop_paths", [])) for item in detection_results)
+        processed = 0
 
         for item in detection_results:
             image_id = item.get("image_id")
@@ -45,6 +47,9 @@ class VerifyPipeline(PipelineStep):
 
             for i, crop_path in enumerate(crop_paths):
                 bbox_label = bboxes[i]["label"]
+                processed += 1
+                if total_crops:
+                    print(f"[VerifyPipeline] Verifying {processed}/{total_crops}...", end="\r", flush=True)
 
                 # 검증 실행
                 result = self.verifier.verify_image(crop_path, label=bbox_label)
@@ -57,6 +62,9 @@ class VerifyPipeline(PipelineStep):
                     pass
 
                 final_results.append(result)
+
+        if total_crops:
+            print()
 
         # 결과 저장
         output_path = Path("data/artifacts/verification.json")

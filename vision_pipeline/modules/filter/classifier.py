@@ -63,8 +63,10 @@ class Classifier(FilterStep):
         rejected_count = 0
         
         print(f"[Classifier] Running existence check on {len(images)} images...")
-        
-        for img_item in images:
+        total = len(images)
+
+        for idx, img_item in enumerate(images, start=1):
+            print(f"[Classifier] Checking {idx}/{total}...", end="\r", flush=True)
             if not img_item.path:
                 continue
                 
@@ -111,5 +113,6 @@ class Classifier(FilterStep):
                 print(f"[Classifier] Error processing {img_item.id}: {e}")
                 rejected_count += 1
 
+        print()
         print(f"[Classifier] Kept {len(kept_images)} positive images. Rejected {rejected_count}.")
         return kept_images
