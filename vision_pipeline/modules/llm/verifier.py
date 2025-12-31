@@ -78,9 +78,10 @@ class LLMVerifier:
         except Exception as e:
             print(f"[LLMVerifier] Error verifying {image_path}: {e}")
             return LabelResult(
-                image_id="", 
-                crop_path=str(image_path), 
-                verified=False, 
-                label=label, 
-                reason=f"Error: {e}"
+                image_id="",
+                crop_path=str(image_path),
+                verified=False,
+                label=label,
+                reason=f"Error: {e}",
+                confidence=0.0
             )

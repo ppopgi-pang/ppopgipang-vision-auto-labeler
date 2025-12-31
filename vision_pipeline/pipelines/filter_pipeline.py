@@ -25,17 +25,17 @@ class FilterPipeline(PipelineStep):
 
     def run(self, images):
         print(f"--- FilterPipeline Start ({len(images)} images) ---")
-        
-        # 1. Deduplication
+
+        # 1. 중복 제거
         images = self.deduplicator.run(images)
-        
-        # 2. Quality Filtering
+
+        # 2. 품질 필터링
         images = self.quality_filter.run(images)
-        
-        # 3. Classification (CLIP Existence Check)
+
+        # 3. 분류 (CLIP 존재 확인)
         images = self.classifier.run(images)
-        
-        # 4. Save Results
+
+        # 4. 결과 저장
         output_path = Path("data/artifacts/filtered.json")
         self.store.save(images, output_path)
         

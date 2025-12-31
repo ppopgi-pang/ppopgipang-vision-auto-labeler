@@ -23,42 +23,42 @@ class VerifyPipeline(PipelineStep):
 
     def run(self, detection_results: list[dict]) -> list[LabelResult]:
         """
-        Input: Output of DetectPipeline (list of dicts)
-        Output: list of LabelResult
+        입력: DetectPipeline의 출력 (딕셔너리 리스트)
+        출력: LabelResult 리스트
         """
         print(f"--- VerifyPipeline Start ({len(detection_results)} items) ---")
-        
+
         final_results = []
-        
+
         for item in detection_results:
             image_id = item.get("image_id")
             crop_paths = item.get("crop_paths", [])
             bboxes = item.get("bboxes", [])
-            
-            # We assume bboxes and crop_paths are aligned by index
-            # Or we can just iterate crop_paths. 
-            # But we need the label from bbox.
-            
+
+            # bboxes와 crop_paths가 인덱스로 정렬되어 있다고 가정
+            # 또는 crop_paths만 반복할 수도 있음.
+            # 하지만 bbox에서 레이블이 필요함.
+
             if len(crop_paths) != len(bboxes):
                 print(f"[VerifyPipeline] Warning: Mismatch crops/bboxes for {image_id}. Skipping.")
                 continue
-                
+
             for i, crop_path in enumerate(crop_paths):
                 bbox_label = bboxes[i]["label"]
-                
-                # Run Verification
+
+                # 검증 실행
                 result = self.verifier.verify_image(crop_path, label=bbox_label)
-                result.image_id = image_id # Attach parent ID
-                
+                result.image_id = image_id  # 부모 ID 첨부
+
                 if result.verified:
                     print(f"[VerifyPipeline] Verified {image_id} as {bbox_label} (Conf: {result.confidence})")
                 else:
                     # print(f"[VerifyPipeline] Rejected {image_id} as {bbox_label}: {result.reason}")
                     pass
-                    
+
                 final_results.append(result)
-                
-        # Save results
+
+        # 결과 저장
         output_path = Path("data/artifacts/verification.json")
         self.store.save([r.to_dict() for r in final_results], output_path)
             
