@@ -150,7 +150,7 @@ class VerifyPipeline(PipelineStep):
                                 label=label,
                                 reason=f"Error: {e2}",
                                 confidence=0.0
-                            ))
+                            )
 
                 # 진행상황 출력
                 processed = len([r for r in results_by_index if r is not None])
@@ -212,7 +212,7 @@ class VerifyPipeline(PipelineStep):
                     label=label,
                     reason=f"Error: {e}",
                     confidence=0.0
-                ))
+                )
 
             processed = len([r for r in results_by_index if r is not None])
             verified_count = len([r for r in results_by_index if r is not None and r.verified])
