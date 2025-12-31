@@ -27,6 +27,7 @@ dependencies = [
     "ultralytics",
     "openai",
     "playwright",
+    "nest-asyncio",  # For Jupyter/Colab asyncio compatibility
 ]
 
 [build-system]
