@@ -9,12 +9,12 @@ class Deduplicator(FilterStep):
         self.config = config
         self.hash_size = config.get("hash_size", 8)
         self.threshold = config.get("threshold", 5)
-        self.seen_hashes = [] # List of (image_item, hash_obj)
+        self.seen_hashes = []  # (image_item, hash_obj) 튜플의 리스트
 
     def run(self, images: list[ImageItem]) -> list[ImageItem]:
         unique_images = []
         duplicates = 0
-        
+
         print(f"[Deduplicator] Processing {len(images)} images...")
 
         for img_item in images:
@@ -23,20 +23,20 @@ class Deduplicator(FilterStep):
                 continue
 
             try:
-                # Open image
+                # 이미지 열기
                 with Image.open(img_item.path) as pil_img:
-                    # Calculate hash
+                    # 해시 계산
                     current_hash = imagehash.phash(pil_img, hash_size=self.hash_size)
-                
+
                 is_duplicate = False
                 for seen_item, seen_hash in self.seen_hashes:
-                    # distance is Hamming distance
+                    # 거리는 해밍 거리
                     if current_hash - seen_hash <= self.threshold:
                         is_duplicate = True
                         duplicates += 1
                         # print(f"Duplicate found: {img_item.id} similar to {seen_item.id}")
                         break
-                
+
                 if not is_duplicate:
                     self.seen_hashes.append((img_item, current_hash))
                     unique_images.append(img_item)

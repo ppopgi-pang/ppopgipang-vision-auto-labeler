@@ -9,8 +9,8 @@ class MetadataStore:
         path.parent.mkdir(parents=True, exist_ok=True)
         
         print(f"[MetadataStore] Saving metadata to {path}")
-        
-        # Determine if data is list of ImageItem or just list of dict or dict
+
+        # 데이터가 ImageItem 리스트인지, 딕셔너리 리스트인지, 딕셔너리인지 결정
         serializable_data = data
         if isinstance(data, list):
             if data and isinstance(data[0], ImageItem):

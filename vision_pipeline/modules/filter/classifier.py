@@ -30,18 +30,18 @@ class Classifier(FilterStep):
 
     def predict(self, image: Image.Image, text: list[str]) -> dict[str, float]:
         """
-        Returns a dictionary of {text: probability}
+        {텍스트: 확률} 딕셔너리를 반환
         """
         try:
             inputs = self.processor(text=text, images=image, return_tensors="pt", padding=True)
             inputs = {k: v.to(self.device) for k, v in inputs.items()}
-            
+
             with torch.no_grad():
                 outputs = self.model(**inputs)
-                logits_per_image = outputs.logits_per_image  # this is the image-text similarity score
-                probs = logits_per_image.softmax(dim=1)  # we can use softmax if we want probabilities across the provided classes
+                logits_per_image = outputs.logits_per_image  # 이미지-텍스트 유사도 점수
+                probs = logits_per_image.softmax(dim=1)  # 제공된 클래스 간 확률이 필요한 경우 softmax 사용
 
-            # Convert result to dict
+            # 결과를 딕셔너리로 변환
             result = {text[i]: probs[0][i].item() for i in range(len(text))}
             return result
         except Exception as e:
@@ -50,12 +50,12 @@ class Classifier(FilterStep):
 
     def run(self, images: list[ImageItem]) -> list[ImageItem]:
         """
-        Inherited from FilterStep. 
-        Note: This default run method might need specific logic for 'what to check against'.
-        For now, it assumes 'keep_positive' logic is desired, but 'keep_positive' needs target keywords.
-        We will rely on 'keep_positive' being called explicitly or configure a default behavior.
+        FilterStep에서 상속됨.
+        참고: 이 기본 run 메서드는 '무엇을 확인할지'에 대한 특정 로직이 필요할 수 있음.
+        현재로서는 'keep_positive' 로직이 필요하다고 가정하지만, 'keep_positive'는 대상 키워드가 필요함.
+        'keep_positive'가 명시적으로 호출되거나 기본 동작을 구성하는 것에 의존함.
         """
-        # For compatibility with Pipeline step, we can default to using image.keyword if available
+        # 파이프라인 단계와의 호환성을 위해 image.keyword가 사용 가능한 경우 기본값으로 사용
         return self.keep_positive(images)
 
     def keep_positive(self, images: list[ImageItem]) -> list[ImageItem]:
@@ -70,35 +70,35 @@ class Classifier(FilterStep):
                 
             target_keyword = img_item.keyword
             if not target_keyword:
-                 # If no keyword on image, maybe fallback to config default or skip?
-                 # ideally 'source' or a specific 'target_class' in config
+                 # 이미지에 키워드가 없는 경우, 설정 기본값으로 폴백하거나 건너뜀?
+                 # 이상적으로는 설정의 'source' 또는 특정 'target_class'
                  target_keyword = self.config.get("target_class", "object")
-            
-            # We compare [target_keyword, "not " + target_keyword] or similar pairs?
-            # Or just check if prob(target_keyword) > threshold?
-            # CLIP works best with comparison. 
-            # Let's use ["a photo of {keyword}", "an image of text", "low quality image", "noise"]
-            # Or simpler: ["a photo of {keyword}", "not {keyword}"]
-            
+
+            # [target_keyword, "not " + target_keyword] 또는 유사한 쌍을 비교?
+            # 아니면 prob(target_keyword) > threshold만 확인?
+            # CLIP은 비교와 함께 가장 잘 작동함.
+            # ["a photo of {keyword}", "an image of text", "low quality image", "noise"] 사용
+            # 또는 더 간단하게: ["a photo of {keyword}", "not {keyword}"]
+
             prompts = [
-                f"a photo of {target_keyword}", 
-                "a photo of nothing", 
-                "text only", 
+                f"a photo of {target_keyword}",
+                "a photo of nothing",
+                "text only",
                 "random noise"
             ]
-            
+
             try:
                 with Image.open(img_item.path) as pil_img:
                     scores = self.predict(pil_img, prompts)
-                
-                # Check if the positive prompt is the highest or above threshold
+
+                # 긍정 프롬프트가 가장 높은지 또는 임계값 이상인지 확인
                 positive_score = scores.get(f"a photo of {target_keyword}", 0.0)
-                
-                # Logic: Is the positive prompt the max score?
+
+                # 로직: 긍정 프롬프트가 최대 점수인가?
                 max_label = max(scores, key=scores.get)
-                
+
                 if max_label == f"a photo of {target_keyword}" and positive_score > self.threshold:
-                    img_item.meta["param_check_score"] = positive_score
+                    img_item.meta["clip_check_score"] = positive_score
                     kept_images.append(img_item)
                 else:
                     # print(f"Rejected {img_item.id}: Max={max_label} ({scores[max_label]:.2f}), Target={positive_score:.2f}")

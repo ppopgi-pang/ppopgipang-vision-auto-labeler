@@ -24,24 +24,24 @@ class QualityFilter(FilterStep):
                 continue
                 
             path = Path(img_item.path)
-            
-            # Check file size
+
+            # 파일 크기 확인
             try:
                 size_kb = os.path.getsize(path) / 1024
                 if size_kb < self.min_file_size_kb:
                     # print(f"Rejected {img_item.id}: size {size_kb:.1f}KB < {self.min_file_size_kb}KB")
                     rejected += 1
                     continue
-                
-                # Check dimensions and Aspect Ratio
+
+                # 차원 및 종횡비 확인
                 with Image.open(path) as pil_img:
                     width, height = pil_img.size
-                    
+
                     if width < self.min_width or height < self.min_height:
                         # print(f"Rejected {img_item.id}: {width}x{height} < min {self.min_width}x{self.min_height}")
                         rejected += 1
                         continue
-                        
+
                     aspect_ratio = max(width, height) / min(width, height)
                     if aspect_ratio > self.max_aspect_ratio:
                         # print(f"Rejected {img_item.id}: AR {aspect_ratio:.2f} > {self.max_aspect_ratio}")

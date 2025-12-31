@@ -18,19 +18,19 @@ class ImageStore:
                 continue
                 
             try:
-                # Create directory: settings.output_dir/raw/{keyword}
+                # 디렉토리 생성: settings.output_dir/raw/{keyword}
                 keyword_slug = item.keyword.replace(" ", "_") if item.keyword else "unknown"
                 save_dir = os.path.join(settings.output_dir, "raw", keyword_slug)
                 os.makedirs(save_dir, exist_ok=True)
-                
-                # Generate filename
-                # If ID is not set, generate one
+
+                # 파일명 생성
+                # ID가 설정되지 않은 경우 생성
                 if not item.id:
                     item.id = str(uuid.uuid4())
-                    
-                filename = f"{item.id}.jpg" # assuming jpg for now, or detect from header?
-                # A better approach is to check content-type or just save as is and detect later.
-                # using .jpg for simplicity as most are images. 
+
+                filename = f"{item.id}.jpg"  # 현재는 jpg로 가정, 또는 헤더에서 감지?
+                # 더 나은 접근 방식은 content-type을 확인하거나 그대로 저장하고 나중에 감지하는 것.
+                # 대부분이 이미지이므로 단순화를 위해 .jpg 사용. 
                 
                 filepath = os.path.join(save_dir, filename)
                 

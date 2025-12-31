@@ -18,49 +18,48 @@ class NaverCrawler(Crawler):
             
             for keyword in keywords:
                 try:
-                    # Navigate to Naver Images
+                    # 네이버 이미지 검색으로 이동
                     page.goto(f"https://search.naver.com/search.naver?where=image&sm=tab_jum&query={keyword}")
-                    
+
                     page.wait_for_load_state("networkidle")
                     page.wait_for_timeout(2000)
 
-                    # Scroll to load more images
-                    # Scroll to load more images
+                    # 더 많은 이미지를 로드하기 위해 스크롤
                     last_height = page.evaluate("document.body.scrollHeight")
                     scroll_attempts = 0
                     max_scrolls = 100
-                    
+
                     while scroll_attempts < max_scrolls:
                         page.keyboard.press("End")
                         page.wait_for_timeout(1000)
-                        
+
                         new_height = page.evaluate("document.body.scrollHeight")
                         if new_height == last_height:
-                            # Try waiting a bit longer
+                            # 조금 더 대기
                             page.wait_for_timeout(1000)
                             new_height = page.evaluate("document.body.scrollHeight")
                             if new_height == last_height:
                                 print("[NaverCrawler] Reached end of page.")
                                 break
-                                
+
                         last_height = new_height
                         scroll_attempts += 1
 
-                    # Naver image selector often involves ._image or ._img
-                    # Check for .tile_item img
-                    
-                    # Updated selector: .tile_item is the container, img is the child. ._image class is removed.
+                    # 네이버 이미지 선택자는 보통 ._image 또는 ._img를 포함
+                    # .tile_item img 확인
+
+                    # 업데이트된 선택자: .tile_item이 컨테이너이고 img가 자식. ._image 클래스는 제거됨.
                     image_elements = page.locator(".tile_item img").all()
                     print(f"DEBUG: Found {len(image_elements)} potential image elements.")
-                    
+
                     count = 0
                     for element in image_elements:
-                        # Removed limit to fetch all available images
+                        # 사용 가능한 모든 이미지를 가져오기 위해 제한 제거
                         # if count >= 10: break
-                            
+
                         try:
                            src = element.get_attribute("src")
-                           # Naver sometimes puts real src in data-src (lazy load) but after scrolling it should be in src
+                           # 네이버는 때때로 실제 src를 data-src에 넣음 (lazy load) 하지만 스크롤 후에는 src에 있어야 함
                            if not src or "data:image" in src:
                                src = element.get_attribute("data-src")
                             
