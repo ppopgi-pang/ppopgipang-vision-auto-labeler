@@ -16,6 +16,8 @@ DEFAULT_SYSTEM_PROMPT = (
 )
 
 class VLMLabeler:
+    """VLM(Vision Language Model)을 사용하여 이미지 라벨링을 수행하는 클래스"""
+
     def __init__(self, config: dict | None = None):
         if config is None:
             config = {}
@@ -24,7 +26,7 @@ class VLMLabeler:
         load_dotenv()
         self.api_key = os.getenv("OPENAI_API_KEY")
         if not self.api_key:
-            print("[VLMLabeler] Warning: OPENAI_API_KEY not found. VLM labeling will be skipped.")
+            print("[VLMLabeler] 경고: OPENAI_API_KEY를 찾을 수 없습니다. VLM 라벨링을 건너뜁니다.")
             self.client = None
         else:
             self.client = OpenAI(api_key=self.api_key)
@@ -36,14 +38,17 @@ class VLMLabeler:
         self.default_label = config.get("default_label", "unknown")
 
     def is_available(self) -> bool:
+        """VLM 클라이언트가 사용 가능한지 확인"""
         return self.client is not None
 
     def _encode_pil_image(self, image: Image.Image) -> str:
+        """PIL 이미지를 base64로 인코딩"""
         buffer = io.BytesIO()
         image.convert("RGB").save(buffer, format="JPEG", quality=90)
         return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
     def label_image(self, image: Image.Image) -> Tuple[str, Optional[float]]:
+        """이미지를 VLM으로 라벨링하여 라벨과 신뢰도 반환"""
         if not self.client:
             return self.default_label, 0.0
 
@@ -84,5 +89,5 @@ class VLMLabeler:
             confidence = result_json.get("confidence", None)
             return str(label).strip(), confidence
         except Exception as e:
-            print(f"[VLMLabeler] Error labeling image: {e}")
+            print(f"[VLMLabeler] 이미지 라벨링 오류: {e}")
             return self.default_label, 0.0

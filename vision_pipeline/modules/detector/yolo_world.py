@@ -5,26 +5,29 @@ from domain.image import ImageItem
 from domain.bbox import BoundingBox
 
 class YoloDetector:
+    """YOLO 모델을 사용한 객체 검출 클래스"""
+
     def __init__(self, config: dict):
         self.config = config
         self.model_path = config.get("model_path", "yolov8n.pt")
         self.conf_threshold = config.get("conf_threshold", 0.5)
         self.classes = config.get("classes", None)  # 필터링할 클래스 인덱스 리스트, None = 모두
 
-        print(f"[YoloDetector] Loading model from {self.model_path}...")
+        print(f"[YoloDetector] {self.model_path}에서 모델 로딩 중...")
         try:
             self.model = YOLO(self.model_path)
-            print("[YoloDetector] Model loaded successfully.")
+            print("[YoloDetector] 모델 로딩 완료.")
         except Exception as e:
-            print(f"[YoloDetector] Failed to load model: {e}")
+            print(f"[YoloDetector] 모델 로딩 실패: {e}")
             raise e
 
     def detect(self, image_item: ImageItem) -> list[BoundingBox]:
+        """단일 이미지에서 객체 검출"""
         if not image_item.path:
             return []
 
         try:
-            # 추론 실행
+            # YOLO 추론 실행
             results = self.model.predict(
                 source=str(image_item.path),
                 conf=self.conf_threshold,
@@ -35,7 +38,7 @@ class YoloDetector:
             bboxes = []
             for result in results:
                 for box in result.boxes:
-                    # box.xyxy는 [x1, y1, x2, y2]
+                    # box.xyxy는 [x1, y1, x2, y2] 형식
                     coords = box.xyxy[0].tolist()
                     conf = box.conf[0].item()
                     cls_id = int(box.cls[0].item())
@@ -53,7 +56,7 @@ class YoloDetector:
             return bboxes
 
         except Exception as e:
-            print(f"[YoloDetector] Error detecting in {image_item.path}: {e}")
+            print(f"[YoloDetector] 검출 오류 {image_item.path}: {e}")
             return []
 
     def detect_batch(self, image_items: list[ImageItem]) -> list[list[BoundingBox]]:
@@ -102,5 +105,5 @@ class YoloDetector:
             return all_bboxes
 
         except Exception as e:
-            print(f"[YoloDetector] Batch detection error: {e}")
+            print(f"[YoloDetector] 배치 검출 오류: {e}")
             return [[] for _ in valid_items]

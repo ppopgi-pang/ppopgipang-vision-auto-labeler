@@ -32,7 +32,6 @@ class Settings(BaseSettings):
     filter_min_face_size: int = 50
 
     # Detector (YOLO) 설정
-    # 예상되는 필요에 따라 추가됨, 이전 yaml에는 엄격히 포함되지 않음
     yolo_model_path: str = "yolov8n.pt"
 
     # LLM / 검증 설정

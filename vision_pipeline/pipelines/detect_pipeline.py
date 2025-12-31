@@ -41,7 +41,7 @@ class DetectPipeline(PipelineStep):
         if self.use_vlm_labeler:
             self.labeler = VLMLabeler(self.config.get("labeler", {}))
             if not self.labeler.is_available():
-                print("[DetectPipeline] VLM labeler unavailable. Falling back to fallback labels.")
+                print("[DetectPipeline] VLM 라벨러를 사용할 수 없습니다. 기본 라벨을 사용합니다.")
                 self.labeler = None
                 self.force_fallback_label = True
 
@@ -50,7 +50,7 @@ class DetectPipeline(PipelineStep):
         입력: ImageItem 리스트
         출력: {image_id, path, bboxes: [BoundingBox], crop_paths: [Path]} 키를 가진 딕셔너리 리스트
         """
-        print(f"--- DetectPipeline Start ({len(images)} images) with batch processing ---")
+        print(f"--- DetectPipeline 시작 ({len(images)}개 이미지) 배치 처리 방식 ---")
 
         results = []
         total = len(images)
@@ -61,7 +61,7 @@ class DetectPipeline(PipelineStep):
             batch_end = min(batch_start + batch_size, total)
             batch_items = images[batch_start:batch_end]
 
-            # 문제 4 해결: path가 있는 항목과 인덱스 매핑
+            # path가 있는 항목과 인덱스 매핑
             valid_items = []
             valid_indices = []
             for idx, img in enumerate(batch_items):
@@ -74,15 +74,15 @@ class DetectPipeline(PipelineStep):
                 try:
                     batch_bboxes = self.detector.detect_batch(valid_items)
                 except Exception as e:
-                    print(f"\n[DetectPipeline] Batch detection error: {e}, falling back to individual processing")
-                    # 문제 8 해결: 에러 복구
+                    print(f"\n[DetectPipeline] 배치 검출 오류: {e}, 개별 처리로 전환")
+                    # 에러 복구: 개별 처리
                     batch_bboxes = []
                     for item in valid_items:
                         try:
                             bboxes = self.detector.detect(item)
                             batch_bboxes.append(bboxes)
                         except Exception as e2:
-                            print(f"\n[DetectPipeline] Individual detection failed {item.path}: {e2}")
+                            print(f"\n[DetectPipeline] 개별 검출 실패 {item.path}: {e2}")
                             batch_bboxes.append([])
             else:
                 batch_bboxes = []
@@ -131,7 +131,7 @@ class DetectPipeline(PipelineStep):
                                     if success:
                                         crop_paths.append(str(crop_path))
                             except Exception as e:
-                                print(f"\n[DetectPipeline] Crop failed for {img_item.path}: {e}")
+                                print(f"\n[DetectPipeline] 크롭 실패 {img_item.path}: {e}")
 
                         if crop_img:
                             try:
@@ -171,10 +171,10 @@ class DetectPipeline(PipelineStep):
                 }
                 results.append(result_entry)
 
-            # 진행상황 출력 (문제 9 해결: 정확한 진행률)
+            # 진행상황 출력
             processed = min(batch_end, total)
             detected_count = sum(1 for r in results if r["bboxes"])
-            print(f"[DetectPipeline] Processed {processed}/{total} (detected: {detected_count})...", end="\r", flush=True)
+            print(f"[DetectPipeline] 처리됨 {processed}/{total} (검출됨: {detected_count})...", end="\r", flush=True)
 
         print()
         # 결과 저장
@@ -182,5 +182,5 @@ class DetectPipeline(PipelineStep):
         self.store.save(results, output_path)
 
         detected_count = sum(1 for r in results if r["bboxes"])
-        print(f"--- DetectPipeline Complete. Processed {len(images)} images, detected in {detected_count}. Results saved to {output_path} ---")
+        print(f"--- DetectPipeline 완료. {len(images)}개 이미지 처리, {detected_count}개에서 검출됨. 결과 저장: {output_path} ---")
         return results
