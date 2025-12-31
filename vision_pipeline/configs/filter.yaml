@@ -1,0 +1,19 @@
+dedup:
+  method: "phash"
+  hash_size: 8
+  threshold: 5  # Hamming distance threshold (0-64 for 64-bit hash). Lower = stricter.
+
+quality:
+  min_width: 256
+  min_height: 256
+  min_file_size_kb: 5
+  max_aspect_ratio: 3.0  # e.g., prevents extremely thin slices
+  check_blur: false
+  blur_threshold: 100.0
+
+classifier:
+  model_name: "openai/clip-vit-base-patch32"
+  threshold: 0.3 # Probability threshold
+  device: "mps" # Enable MPS for Mac
+  target_class: "toy" # Default fallback
+

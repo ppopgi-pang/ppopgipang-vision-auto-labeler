@@ -1,0 +1,34 @@
+[project]
+name = "vision-pipeline"
+version = "0.1.0"
+description = "Research/Production intermediate stage vision auto-labeler pipeline"
+authors = [
+    {name = "User", email = "user@example.com"},
+]
+requires-python = ">=3.10"
+dependencies = [
+    "pyyaml",
+    "pydantic",
+    "pydantic-settings",
+    "python-dotenv",
+    "requests",
+    "pillow",
+    "numpy",
+    "opencv-python-headless",
+    "ImageHash", # for pHash deduplication
+    # Specific dependencies will be added as we implement modules
+    # "ultralytics", # for YOLO
+    # "transformers", # for general ML
+    # "torch",
+    # "torchvision",
+    "torch",
+    "torchvision",
+    "transformers",
+    "ultralytics",
+    "openai",
+    "playwright",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

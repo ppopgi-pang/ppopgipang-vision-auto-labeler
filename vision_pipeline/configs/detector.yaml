@@ -1,0 +1,5 @@
+model_path: "models/yolov8n.pt"  # provided by user
+conf_threshold: 0.5
+classes: null  # null for all classes, or list [0, 1, 2] for person, bicycle, car etc.
+save_crops: true
+crop_padding: 0

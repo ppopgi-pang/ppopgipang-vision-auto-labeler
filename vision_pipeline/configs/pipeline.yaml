@@ -1,0 +1,16 @@
+data_dir: "data"
+artifacts_dir: "data/artifacts"
+
+stages:
+  crawl: true
+  filter: true
+  detect: true
+  verify: true
+
+# Overrides for specific stages if needed
+crawl:
+  limit: 50
+
+filter:
+  dedup:
+    method: "phash"
