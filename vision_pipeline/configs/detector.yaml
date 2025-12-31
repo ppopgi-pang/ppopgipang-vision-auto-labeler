@@ -6,7 +6,7 @@ crop_padding: 0
 batch_size: 16  # YOLO batch processing (8-16 recommended for T4)
 
 # Debug visualization (annotated images)
-save_annotated: false
+save_annotated: true
 annotated_dir: "data/annotated"
 annotated_box_color: [0, 255, 0]
 annotated_line_width: 2
@@ -18,8 +18,9 @@ use_vlm_labeler: true
 labeler_fallback_label: "unknown"
 labeler:
   model: "gpt-4o-mini"
-  max_tokens: 120
+  max_tokens: 300
   temperature: 0.0
+  rate_limit_delay: 0.5  # Delay between labeler calls (seconds)
   default_label: "unknown"
   system_prompt: |
     You are a vision classifier specialized in character labeling.

@@ -1,7 +1,7 @@
-model: "gpt-4o"
+model: "gpt-4o-mini"
 max_tokens: 300
 temperature: 0.0
-batch_size: 8  # Concurrent API requests (OpenAI rate limit safe)
+batch_size: 3  # Concurrent API requests (OpenAI rate limit safe)
 rate_limit_delay: 1.0  # Delay between batches (seconds)
 
 system_prompt: |

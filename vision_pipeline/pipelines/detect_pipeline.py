@@ -1,3 +1,4 @@
+import time
 import yaml
 from pathlib import Path
 from pipelines.base import PipelineStep
@@ -37,9 +38,12 @@ class DetectPipeline(PipelineStep):
         self.annotated_font_size = int(self.config.get("annotated_font_size", 14))
         self.annotated_show_confidence = bool(self.config.get("annotated_show_confidence", True))
         self.labeler = None
+        self.labeler_rate_limit_delay = 0.0
         self.force_fallback_label = False
         if self.use_vlm_labeler:
-            self.labeler = VLMLabeler(self.config.get("labeler", {}))
+            labeler_config = self.config.get("labeler", {})
+            self.labeler_rate_limit_delay = float(labeler_config.get("rate_limit_delay", 0.0))
+            self.labeler = VLMLabeler(labeler_config)
             if not self.labeler.is_available():
                 print("[DetectPipeline] VLM 라벨러를 사용할 수 없습니다. 기본 라벨을 사용합니다.")
                 self.labeler = None
@@ -107,6 +111,8 @@ class DetectPipeline(PipelineStep):
                             crop_img = crop_image_to_pil(img_item.path, bbox, padding=self.crop_padding)
                             if crop_img:
                                 label, _ = self.labeler.label_image(crop_img)
+                                if self.labeler_rate_limit_delay > 0:
+                                    time.sleep(self.labeler_rate_limit_delay)
                             else:
                                 label = self.labeler_fallback_label
                             bbox.label = label
