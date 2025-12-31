@@ -16,3 +16,4 @@ classifier:
   threshold: 0.3 # Probability threshold
   device: "auto"
   target_class: "toy" # Default fallback
+  batch_size: 32  # GPU batch processing (T4 optimized)

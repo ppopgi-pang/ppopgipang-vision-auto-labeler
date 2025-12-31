@@ -1,10 +1,26 @@
 import imagehash
 from PIL import Image
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from modules.filter.base import FilterStep
 from domain.image import ImageItem
 from config import settings
+
+
+def _compute_hash_worker(img_path: str, hash_size: int) -> tuple[imagehash.ImageHash | None, str | None]:
+    """
+    ProcessPoolExecutor를 위한 모듈 레벨 함수 (picklable)
+    """
+    if not img_path or not Path(img_path).exists():
+        return None, f"[Deduplicator] specific path not found: {img_path}"
+
+    try:
+        with Image.open(img_path) as pil_img:
+            current_hash = imagehash.phash(pil_img, hash_size=hash_size)
+        return current_hash, None
+    except Exception as e:
+        return None, f"[Deduplicator] Error processing {img_path}: {e}"
+
 
 class Deduplicator(FilterStep):
     def __init__(self, config: dict):
@@ -13,32 +29,22 @@ class Deduplicator(FilterStep):
         self.threshold = config.get("threshold", 5)
         self.seen_hashes = []  # (image_item, hash_obj) 튜플의 리스트
 
-    def _compute_hash(self, img_item: ImageItem) -> tuple[imagehash.ImageHash | None, str | None]:
-        if not img_item.path or not Path(img_item.path).exists():
-            return None, f"[Deduplicator] specific path not found: {img_item.path}"
-
-        try:
-            with Image.open(img_item.path) as pil_img:
-                current_hash = imagehash.phash(pil_img, hash_size=self.hash_size)
-            return current_hash, None
-        except Exception as e:
-            return None, f"[Deduplicator] Error processing {img_item.path}: {e}"
-
     def run(self, images: list[ImageItem]) -> list[ImageItem]:
         unique_images = []
         duplicates = 0
 
-        print(f"[Deduplicator] Processing {len(images)} images...")
+        print(f"[Deduplicator] Processing {len(images)} images with ProcessPoolExecutor (bypassing GIL)...")
         total = len(images)
         if total == 0:
             return unique_images
 
-        max_workers = max(1, int(getattr(settings, "max_workers", 4)))
+        # CPU 코어 수에 맞춰 워커 수 조정 (일반적으로 CPU 코어 수)
+        max_workers = max(1, min(int(getattr(settings, "max_workers", 64)) // 4, 16))
         hash_results: list[tuple[ImageItem, imagehash.ImageHash | None, str | None]] = [None] * total
 
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
             futures = {
-                executor.submit(self._compute_hash, img_item): idx
+                executor.submit(_compute_hash_worker, img_item.path, self.hash_size): idx
                 for idx, img_item in enumerate(images)
             }
             completed = 0

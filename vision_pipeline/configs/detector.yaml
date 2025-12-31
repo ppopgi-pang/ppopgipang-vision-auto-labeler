@@ -3,3 +3,4 @@ conf_threshold: 0.5
 classes: null  # null for all classes, or list [0, 1, 2] for person, bicycle, car etc.
 save_crops: true
 crop_padding: 0
+batch_size: 16  # YOLO batch processing (8-16 recommended for T4)

@@ -1,9 +1,11 @@
 model: "gpt-4o"
 max_tokens: 300
 temperature: 0.0
+batch_size: 8  # Concurrent API requests (OpenAI rate limit safe)
+rate_limit_delay: 1.0  # Delay between batches (seconds)
 
 system_prompt: |
-  You are an expert image verifier. 
+  You are an expert image verifier.
   You will be given an image and a question: "Is this a {label}?"
   Analyze the image carefully.
   Return your answer in the following JSON format:
