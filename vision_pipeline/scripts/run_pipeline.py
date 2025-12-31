@@ -14,17 +14,20 @@ def main():
     load_dotenv()
     
     parser = argparse.ArgumentParser(description="Run Vision Pipeline")
-    parser.add_argument("--keyword", type=str, required=True, help="Search keyword (e.g., 'miku figure')")
+    parser.add_argument("--keywords", type=str, nargs='+', required=True, help="Search keywords (e.g., 'miku figure' 'anime doll')")
     parser.add_argument("--target", type=str, default="object", help="Target object name for CLIP/LLM (e.g., 'miku')")
     parser.add_argument("--limit", type=int, default=10, help="Number of images to crawl")
     
     args = parser.parse_args()
     
+    # Create a simple job ID from the first keyword
+    first_kw = args.keywords[0].replace(' ', '_')
+    
     job = Job(
-        keywords=[args.keyword],
+        keywords=args.keywords,
         target_class=args.target,
         limit=args.limit,
-        job_id=f"job_{args.target}_{args.keyword.replace(' ', '_')}"
+        job_id=f"job_{args.target}_{first_kw}"
     )
     
     runner = PipelineRunner()
