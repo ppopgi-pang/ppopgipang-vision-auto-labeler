@@ -12,24 +12,24 @@ class CrawlPipeline(PipelineStep):
         self.image_store = ImageStore()
 
     def run(self, job: Job) -> list[ImageItem]:
-        print(f"Running CrawlPipeline for job: {job}")
-        
+        print(f"CrawlPipeline 실행 중 - job: {job}")
+
         images: list[ImageItem] = []
-        
-        # Determine which crawler to use based on job or config
-        # For now, let's assume we use both or based on some flag in Job
-        # Since Job definition isn't fully visible here, I'll default to searching both for the keywords
-        
+
+        # job 또는 config에 기반하여 사용할 크롤러 결정
+        # 현재는 두 크롤러 모두 사용하거나 Job의 플래그에 기반한다고 가정
+        # Job 정의가 여기서 완전히 보이지 않으므로 키워드에 대해 두 크롤러 모두 검색하는 것을 기본으로 함
+
         if job.keywords:
-            print("Fetching from Google...")
+            print("Google에서 가져오는 중...")
             images.extend(self.google_crawler.fetch(job.keywords))
-            
-            print("Fetching from Naver...")
+
+            print("Naver에서 가져오는 중...")
             images.extend(self.naver_crawler.fetch(job.keywords))
-            
-        print(f"Total images crawled: {len(images)}")
-        
-        # Save images
+
+        print(f"총 크롤링된 이미지: {len(images)}")
+
+        # 이미지 저장
         self.image_store.save_raw(images)
-        
+
         return images

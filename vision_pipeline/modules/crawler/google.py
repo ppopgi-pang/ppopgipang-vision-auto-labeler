@@ -11,7 +11,7 @@ class GoogleCrawler(Crawler):
         return run_sync_in_thread_if_event_loop(self._fetch_sync, keywords)
 
     def _fetch_sync(self, keywords: List[str]) -> List[ImageItem]:
-        print(f"[GoogleCrawler] Fetching for {keywords}...")
+        print(f"[GoogleCrawler] {keywords}에 대해 검색 중...")
 
         image_items = []
 
@@ -53,7 +53,7 @@ class GoogleCrawler(Crawler):
                             # 여러 가능한 선택자 또는 텍스트 시도
                             more_button = page.locator(".mye4qd, input[value='Show more results'], input[type='button'][value='Show more results']")
                             if more_button.is_visible():
-                                print("[GoogleCrawler] Clicking 'Show more results' button...")
+                                print("[GoogleCrawler] '더 보기' 버튼 클릭 중...")
                                 more_button.click()
                                 page.wait_for_timeout(2000)
                         except Exception:
@@ -65,7 +65,7 @@ class GoogleCrawler(Crawler):
                             page.wait_for_timeout(1000)
                             new_height = page.evaluate("document.body.scrollHeight")
                             if new_height == last_height:
-                                print("[GoogleCrawler] Reached end of page or no new content.")
+                                print("[GoogleCrawler] 페이지 끝에 도달했거나 새 콘텐츠가 없습니다.")
                                 break
 
                         last_height = new_height
@@ -77,7 +77,7 @@ class GoogleCrawler(Crawler):
 
                     # 브라우저 검사에 기반한 업데이트된 선택자 (2024-05)
                     image_elements = page.locator("img.YQ4gaf").all()
-                    print(f"DEBUG: Found {len(image_elements)} potential 'img.YQ4gaf' elements.")
+                    print(f"DEBUG: {len(image_elements)}개의 'img.YQ4gaf' 요소 발견.")
 
                     count = 0
                     for element in image_elements:
@@ -97,10 +97,10 @@ class GoogleCrawler(Crawler):
                                 ))
                                 count += 1
                         except Exception as e:
-                            print(f"Error processing image: {e}")
+                            print(f"이미지 처리 오류: {e}")
 
                 except Exception as e:
-                    print(f"Error crawling keyword {keyword}: {e}")
+                    print(f"키워드 {keyword} 크롤링 오류: {e}")
 
             browser.close()
             

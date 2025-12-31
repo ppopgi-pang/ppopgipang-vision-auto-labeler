@@ -12,7 +12,7 @@ class NaverCrawler(Crawler):
         return run_sync_in_thread_if_event_loop(self._fetch_sync, keywords)
 
     def _fetch_sync(self, keywords: List[str]) -> List[ImageItem]:
-        print(f"[NaverCrawler] Fetching for {keywords}...")
+        print(f"[NaverCrawler] {keywords}에 대해 검색 중...")
         
         image_items = []
         
@@ -43,7 +43,7 @@ class NaverCrawler(Crawler):
                             page.wait_for_timeout(1000)
                             new_height = page.evaluate("document.body.scrollHeight")
                             if new_height == last_height:
-                                print("[NaverCrawler] Reached end of page.")
+                                print("[NaverCrawler] 페이지 끝에 도달했습니다.")
                                 break
 
                         last_height = new_height
@@ -54,7 +54,7 @@ class NaverCrawler(Crawler):
 
                     # 업데이트된 선택자: .tile_item이 컨테이너이고 img가 자식. ._image 클래스는 제거됨.
                     image_elements = page.locator(".tile_item img").all()
-                    print(f"DEBUG: Found {len(image_elements)} potential image elements.")
+                    print(f"DEBUG: {len(image_elements)}개의 이미지 요소 발견.")
 
                     count = 0
                     for element in image_elements:
@@ -66,7 +66,7 @@ class NaverCrawler(Crawler):
                            # 네이버는 때때로 실제 src를 data-src에 넣음 (lazy load) 하지만 스크롤 후에는 src에 있어야 함
                            if not src or "data:image" in src:
                                src = element.get_attribute("data-src")
-                            
+
                            if src and src.startswith("http"):
                                 image_items.append(ImageItem(
                                     url=src,
@@ -75,10 +75,10 @@ class NaverCrawler(Crawler):
                                 ))
                                 count += 1
                         except Exception as e:
-                            print(f"Error processing image: {e}")
-                            
+                            print(f"이미지 처리 오류: {e}")
+
                 except Exception as e:
-                    print(f"Error crawling keyword {keyword}: {e}")
+                    print(f"키워드 {keyword} 크롤링 오류: {e}")
 
             browser.close()
             
