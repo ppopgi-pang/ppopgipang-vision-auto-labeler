@@ -11,7 +11,7 @@ class Settings(BaseSettings):
 
     # 일반 파이프라인 설정
     output_dir: str = "data"
-    max_workers: int = 16
+    max_workers: int = 64  # T4 GPU 환경에 최적화 (다운로드, I/O 병렬화)
     pipeline_stages: List[str] = ["crawl", "filter", "detect", "verify"]
 
     # Google 크롤러 설정

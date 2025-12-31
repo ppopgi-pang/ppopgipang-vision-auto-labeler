@@ -50,7 +50,7 @@ class Classifier(FilterStep):
 
     def predict(self, image: Image.Image, text: list[str]) -> dict[str, float]:
         """
-        {텍스트: 확률} 딕셔너리를 반환
+        {텍스트: 확률} 딕셔너리를 반환 (단일 이미지)
         """
         try:
             inputs = self.processor(text=text, images=image, return_tensors="pt", padding=True)
@@ -68,6 +68,33 @@ class Classifier(FilterStep):
             print(f"[Classifier] Prediction error: {e}")
             return {}
 
+    def predict_batch(self, images: list[Image.Image], text: list[str]) -> list[dict[str, float]]:
+        """
+        배치 이미지에 대해 {텍스트: 확률} 딕셔너리 리스트 반환
+        GPU 메모리 효율성을 위해 배치 처리
+        """
+        if not images:
+            return []
+
+        try:
+            inputs = self.processor(text=text, images=images, return_tensors="pt", padding=True)
+            inputs = {k: v.to(self.device) for k, v in inputs.items()}
+
+            with torch.no_grad():
+                outputs = self.model(**inputs)
+                logits_per_image = outputs.logits_per_image  # [batch_size, num_prompts]
+                probs = logits_per_image.softmax(dim=1)  # [batch_size, num_prompts]
+
+            # 각 이미지에 대한 결과를 딕셔너리 리스트로 변환
+            results = []
+            for i in range(len(images)):
+                result = {text[j]: probs[i][j].item() for j in range(len(text))}
+                results.append(result)
+            return results
+        except Exception as e:
+            print(f"[Classifier] Batch prediction error: {e}")
+            return [{} for _ in images]
+
     def run(self, images: list[ImageItem]) -> list[ImageItem]:
         """
         FilterStep에서 상속됨.
@@ -81,57 +108,90 @@ class Classifier(FilterStep):
     def keep_positive(self, images: list[ImageItem]) -> list[ImageItem]:
         kept_images = []
         rejected_count = 0
-        
-        print(f"[Classifier] Running existence check on {len(images)} images...")
+
+        print(f"[Classifier] Running existence check on {len(images)} images with batch processing...")
         total = len(images)
+        batch_size = self.config.get("batch_size", 32)  # T4 GPU에 최적화된 배치 크기
 
-        for idx, img_item in enumerate(images, start=1):
-            print(f"[Classifier] Checking {idx}/{total}...", end="\r", flush=True)
-            if not img_item.path:
+        # 배치 단위로 처리
+        for batch_start in range(0, total, batch_size):
+            batch_end = min(batch_start + batch_size, total)
+            batch_items = images[batch_start:batch_end]
+
+            # 배치 준비: 이미지 로드 및 프롬프트 생성
+            batch_images = []
+            batch_indices = []
+            batch_prompts_list = []
+
+            for idx, img_item in enumerate(batch_items):
+                if not img_item.path:
+                    continue
+
+                target_keyword = img_item.keyword
+                if not target_keyword:
+                    target_keyword = self.config.get("target_class", "object")
+
+                try:
+                    pil_img = Image.open(img_item.path)
+                    batch_images.append(pil_img)
+                    batch_indices.append(idx)
+                    batch_prompts_list.append((
+                        target_keyword,
+                        [
+                            f"a photo of {target_keyword}",
+                            "a photo of nothing",
+                            "text only",
+                            "random noise"
+                        ]
+                    ))
+                except (UnidentifiedImageError, OSError) as e:
+                    print(f"\n[Classifier] Invalid image file {img_item.path}: {e}")
+                    rejected_count += 1
+                except Exception as e:
+                    print(f"\n[Classifier] Error loading {img_item.path}: {e}")
+                    rejected_count += 1
+
+            if not batch_images:
                 continue
-                
-            target_keyword = img_item.keyword
-            if not target_keyword:
-                 # 이미지에 키워드가 없는 경우, 설정 기본값으로 폴백하거나 건너뜀?
-                 # 이상적으로는 설정의 'source' 또는 특정 'target_class'
-                 target_keyword = self.config.get("target_class", "object")
 
-            # [target_keyword, "not " + target_keyword] 또는 유사한 쌍을 비교?
-            # 아니면 prob(target_keyword) > threshold만 확인?
-            # CLIP은 비교와 함께 가장 잘 작동함.
-            # ["a photo of {keyword}", "an image of text", "low quality image", "noise"] 사용
-            # 또는 더 간단하게: ["a photo of {keyword}", "not {keyword}"]
-
-            prompts = [
-                f"a photo of {target_keyword}",
-                "a photo of nothing",
-                "text only",
-                "random noise"
-            ]
+            # 모든 이미지가 같은 키워드를 가진다고 가정 (첫 번째 프롬프트 사용)
+            # 만약 다른 키워드가 필요하면 개별 처리 필요
+            prompts = batch_prompts_list[0][1]
 
             try:
-                with Image.open(img_item.path) as pil_img:
-                    scores = self.predict(pil_img, prompts)
+                # 배치 추론 실행
+                batch_scores = self.predict_batch(batch_images, prompts)
 
-                # 긍정 프롬프트가 가장 높은지 또는 임계값 이상인지 확인
-                positive_score = scores.get(f"a photo of {target_keyword}", 0.0)
+                # 결과 처리
+                for idx, scores in zip(batch_indices, batch_scores):
+                    img_item = batch_items[idx]
+                    target_keyword = batch_prompts_list[batch_indices.index(idx)][0]
 
-                # 로직: 긍정 프롬프트가 최대 점수인가?
-                max_label = max(scores, key=scores.get)
+                    positive_score = scores.get(f"a photo of {target_keyword}", 0.0)
+                    max_label = max(scores, key=scores.get) if scores else ""
 
-                if max_label == f"a photo of {target_keyword}" and positive_score > self.threshold:
-                    img_item.meta["clip_check_score"] = positive_score
-                    kept_images.append(img_item)
-                else:
-                    # print(f"Rejected {img_item.id}: Max={max_label} ({scores[max_label]:.2f}), Target={positive_score:.2f}")
-                    rejected_count += 1
-                    
-            except (UnidentifiedImageError, OSError) as e:
-                print(f"[Classifier] Invalid image file {img_item.path}: {e}")
-                rejected_count += 1
+                    if max_label == f"a photo of {target_keyword}" and positive_score > self.threshold:
+                        img_item.meta["clip_check_score"] = positive_score
+                        kept_images.append(img_item)
+                    else:
+                        rejected_count += 1
+
+                # GPU 메모리 정리
+                if self.device == "cuda":
+                    torch.cuda.empty_cache()
+
             except Exception as e:
-                print(f"[Classifier] Error processing {img_item.id}: {e}")
-                rejected_count += 1
+                print(f"\n[Classifier] Batch processing error: {e}")
+                # 배치 실패 시 모두 거부
+                rejected_count += len(batch_images)
+            finally:
+                # PIL 이미지 닫기
+                for img in batch_images:
+                    img.close()
+
+            # 진행상황 출력
+            processed = min(batch_end, total)
+            print(f"[Classifier] Processed {processed}/{total} (kept: {len(kept_images)}, rejected: {rejected_count})...", end="\r", flush=True)
 
         print()
         print(f"[Classifier] Kept {len(kept_images)} positive images. Rejected {rejected_count}.")

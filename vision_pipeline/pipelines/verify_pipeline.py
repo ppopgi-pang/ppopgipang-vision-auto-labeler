@@ -1,5 +1,6 @@
 import yaml
 import json
+import asyncio
 from pathlib import Path
 from pipelines.base import PipelineStep
 from modules.llm.verifier import LLMVerifier
@@ -26,20 +27,14 @@ class VerifyPipeline(PipelineStep):
         입력: DetectPipeline의 출력 (딕셔너리 리스트)
         출력: LabelResult 리스트
         """
-        print(f"--- VerifyPipeline Start ({len(detection_results)} items) ---")
+        print(f"--- VerifyPipeline Start ({len(detection_results)} items) with async batch processing ---")
 
-        final_results = []
-        total_crops = sum(len(item.get("crop_paths", [])) for item in detection_results)
-        processed = 0
-
+        # 모든 (crop_path, label, image_id) 수집
+        crop_data = []
         for item in detection_results:
             image_id = item.get("image_id")
             crop_paths = item.get("crop_paths", [])
             bboxes = item.get("bboxes", [])
-
-            # bboxes와 crop_paths가 인덱스로 정렬되어 있다고 가정
-            # 또는 crop_paths만 반복할 수도 있음.
-            # 하지만 bbox에서 레이블이 필요함.
 
             if len(crop_paths) != len(bboxes):
                 print(f"[VerifyPipeline] 경고: {image_id}의 crop/bbox 불일치. 건너뜁니다.")
@@ -47,28 +42,51 @@ class VerifyPipeline(PipelineStep):
 
             for i, crop_path in enumerate(crop_paths):
                 bbox_label = bboxes[i]["label"]
-                processed += 1
-                if total_crops:
-                    print(f"[VerifyPipeline] Verifying {processed}/{total_crops}...", end="\r", flush=True)
+                crop_data.append((crop_path, bbox_label, image_id))
 
-                # 검증 실행
-                result = self.verifier.verify_image(crop_path, label=bbox_label)
-                result.image_id = image_id  # 부모 ID 첨부
+        total_crops = len(crop_data)
+        print(f"[VerifyPipeline] Total crops to verify: {total_crops}")
 
-                if result.verified:
-                    print(f"[VerifyPipeline] Verified {image_id} as {bbox_label} (Conf: {result.confidence})")
-                else:
-                    # print(f"[VerifyPipeline] Rejected {image_id} as {bbox_label}: {result.reason}")
-                    pass
+        if total_crops == 0:
+            print("--- VerifyPipeline Complete. No crops to verify. ---")
+            return []
 
-                final_results.append(result)
+        # 비동기 배치 검증 실행
+        batch_size = self.config.get("batch_size", 16)  # 동시 API 요청 수
+        final_results = []
 
-        if total_crops:
-            print()
+        async def run_async():
+            results = []
+            for batch_start in range(0, total_crops, batch_size):
+                batch_end = min(batch_start + batch_size, total_crops)
+                batch = crop_data[batch_start:batch_end]
 
+                # (crop_path, label) 튜플 리스트 생성
+                crop_label_pairs = [(crop_path, label) for crop_path, label, _ in batch]
+
+                # 배치 비동기 검증
+                batch_results = await self.verifier.verify_batch_async(crop_label_pairs)
+
+                # image_id 첨부
+                for i, result in enumerate(batch_results):
+                    result.image_id = batch[i][2]  # image_id
+                    results.append(result)
+
+                # 진행상황 출력
+                processed = len(results)
+                verified_count = len([r for r in results if r.verified])
+                print(f"[VerifyPipeline] Verified {processed}/{total_crops} (confirmed: {verified_count})...", end="\r", flush=True)
+
+            return results
+
+        # asyncio.run()으로 비동기 코드 실행
+        final_results = asyncio.run(run_async())
+
+        print()
         # 결과 저장
         output_path = Path("data/artifacts/verification.json")
         self.store.save([r.to_dict() for r in final_results], output_path)
-            
-        print(f"--- VerifyPipeline Complete. Verified {len([r for r in final_results if r.verified])}/{len(final_results)} items. ---")
+
+        verified_count = len([r for r in final_results if r.verified])
+        print(f"--- VerifyPipeline Complete. Verified {verified_count}/{len(final_results)} items. ---")
         return final_results
