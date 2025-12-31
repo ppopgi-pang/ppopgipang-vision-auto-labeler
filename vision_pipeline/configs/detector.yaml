@@ -21,6 +21,8 @@ labeler:
   max_tokens: 300
   temperature: 0.0
   rate_limit_delay: 0.5  # Delay between labeler calls (seconds)
+  rate_limit_max_retries: 2  # Retries on rate limit (429)
+  rate_limit_retry_default_delay: 1.0  # Fallback delay if no retry hint (seconds)
   default_label: "unknown"
   system_prompt: |
     You are a vision classifier specialized in character labeling.

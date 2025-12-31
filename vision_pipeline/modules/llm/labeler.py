@@ -2,6 +2,8 @@ import os
 import io
 import json
 import base64
+import re
+import time
 from typing import Optional, Tuple
 
 from PIL import Image
@@ -36,6 +38,8 @@ class VLMLabeler:
         self.max_tokens = config.get("max_tokens", 120)
         self.temperature = config.get("temperature", 0.0)
         self.default_label = config.get("default_label", "unknown")
+        self.rate_limit_max_retries = int(config.get("rate_limit_max_retries", 2))
+        self.rate_limit_retry_default_delay = float(config.get("rate_limit_retry_default_delay", 1.0))
 
     def is_available(self) -> bool:
         """VLM 클라이언트가 사용 가능한지 확인"""
@@ -47,6 +51,17 @@ class VLMLabeler:
         image.convert("RGB").save(buffer, format="JPEG", quality=90)
         return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
+    def _get_rate_limit_delay(self, error: Exception) -> Optional[float]:
+        """Rate limit 오류일 때 재시도 대기 시간을 추출"""
+        message = str(error)
+        if "rate_limit" not in message.lower() and "rate limit" not in message.lower() and "429" not in message:
+            return None
+        match = re.search(r"Please try again in (\d+)ms", message, re.IGNORECASE)
+        if match:
+            delay_ms = int(match.group(1))
+            return max(delay_ms / 1000.0, 0.001)
+        return self.rate_limit_retry_default_delay
+
     def label_image(self, image: Image.Image) -> Tuple[str, Optional[float]]:
         """이미지를 VLM으로 라벨링하여 라벨과 신뢰도 반환"""
         if not self.client:
@@ -54,40 +69,52 @@ class VLMLabeler:
 
         try:
             base64_image = self._encode_pil_image(image)
-
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": self.system_prompt},
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": (
-                                    "Return ONLY valid JSON with this schema:\n"
-                                    '{ "label": string, "confidence": number }\n'
-                                    "The label must be a concise class name."
-                                ),
-                            },
-                            {
-                                "type": "image_url",
-                                "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
-                            },
-                        ],
-                    },
-                ],
-                max_tokens=self.max_tokens,
-                temperature=self.temperature,
-                response_format={"type": "json_object"},
-            )
-
-            content = response.choices[0].message.content
-            result_json = json.loads(content)
-
-            label = result_json.get("label") or self.default_label
-            confidence = result_json.get("confidence", None)
-            return str(label).strip(), confidence
         except Exception as e:
-            print(f"[VLMLabeler] 이미지 라벨링 오류: {e}")
+            print(f"[VLMLabeler] 이미지 인코딩 오류: {e}")
             return self.default_label, 0.0
+
+        retries_left = max(self.rate_limit_max_retries, 0)
+        while True:
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": self.system_prompt},
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": (
+                                        "Return ONLY valid JSON with this schema:\n"
+                                        '{ "label": string, "confidence": number }\n'
+                                        "The label must be a concise class name."
+                                    ),
+                                },
+                                {
+                                    "type": "image_url",
+                                    "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+                                },
+                            ],
+                        },
+                    ],
+                    max_tokens=self.max_tokens,
+                    temperature=self.temperature,
+                    response_format={"type": "json_object"},
+                )
+
+                content = response.choices[0].message.content
+                result_json = json.loads(content)
+
+                label = result_json.get("label") or self.default_label
+                confidence = result_json.get("confidence", None)
+                return str(label).strip(), confidence
+            except Exception as e:
+                retry_delay = self._get_rate_limit_delay(e)
+                if retry_delay is not None and retries_left > 0:
+                    print(f"[VLMLabeler] Rate limit hit. Retrying in {retry_delay:.3f}s...")
+                    time.sleep(retry_delay)
+                    retries_left -= 1
+                    continue
+                print(f"[VLMLabeler] 이미지 라벨링 오류: {e}")
+                return self.default_label, 0.0
