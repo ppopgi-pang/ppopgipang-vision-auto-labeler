@@ -15,7 +15,7 @@ class FilterPipeline(PipelineStep):
             with open(config_file) as f:
                 self.config = yaml.safe_load(f)
         else:
-            print(f"Warning: Config file {config_file} not found. Using defaults.")
+            print(f"경고: 설정 파일 {config_file}을 찾을 수 없습니다. 기본값을 사용합니다.")
             self.config = {}
         
         self.deduplicator = Deduplicator(self.config.get("dedup", {}))

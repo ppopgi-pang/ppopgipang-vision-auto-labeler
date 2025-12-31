@@ -15,7 +15,7 @@ class VerifyPipeline(PipelineStep):
             with open(config_file) as f:
                 self.config = yaml.safe_load(f)
         else:
-            print(f"Warning: Config file {config_file} not found. Using defaults.")
+            print(f"경고: 설정 파일 {config_file}을 찾을 수 없습니다. 기본값을 사용합니다.")
             self.config = {}
             
         self.verifier = LLMVerifier(self.config)
@@ -40,7 +40,7 @@ class VerifyPipeline(PipelineStep):
             # 하지만 bbox에서 레이블이 필요함.
 
             if len(crop_paths) != len(bboxes):
-                print(f"[VerifyPipeline] Warning: Mismatch crops/bboxes for {image_id}. Skipping.")
+                print(f"[VerifyPipeline] 경고: {image_id}의 crop/bbox 불일치. 건너뜁니다.")
                 continue
 
             for i, crop_path in enumerate(crop_paths):
