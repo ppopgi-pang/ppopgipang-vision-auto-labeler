@@ -23,7 +23,7 @@ class LLMVerifier:
             self.client = OpenAI(api_key=self.api_key)
             self.async_client = AsyncOpenAI(api_key=self.api_key)
 
-        self.model = config.get("model", "gpt-4o")
+        self.model = config.get("model", "gpt-4o-mini")
         self.system_prompt = config.get("system_prompt", "You are a helpful assistant.")
         self.max_tokens = config.get("max_tokens", 300)
         self.temperature = config.get("temperature", 0.0)

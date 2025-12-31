@@ -2,8 +2,9 @@ import yaml
 from pathlib import Path
 from pipelines.base import PipelineStep
 from modules.detector.yolo_world import YoloDetector
-from modules.detector.bbox_utils import crop_image
+from modules.detector.bbox_utils import crop_image, crop_image_to_pil, draw_bboxes
 from modules.storage.metadata_store import MetadataStore
+from modules.llm.labeler import VLMLabeler
 from domain.image import ImageItem
 
 class DetectPipeline(PipelineStep):
@@ -23,6 +24,26 @@ class DetectPipeline(PipelineStep):
         
         self.save_crops = self.config.get("save_crops", True)
         self.crop_padding = self.config.get("crop_padding", 0)
+        self.use_vlm_labeler = self.config.get("use_vlm_labeler", False)
+        self.labeler_fallback_label = self.config.get("labeler_fallback_label", "unknown")
+        self.save_annotated = self.config.get("save_annotated", False)
+        self.annotated_dir = self.config.get("annotated_dir", "data/annotated")
+        annotated_color = self.config.get("annotated_box_color", [0, 255, 0])
+        if isinstance(annotated_color, (list, tuple)) and len(annotated_color) == 3:
+            self.annotated_box_color = tuple(int(c) for c in annotated_color)
+        else:
+            self.annotated_box_color = (0, 255, 0)
+        self.annotated_line_width = int(self.config.get("annotated_line_width", 2))
+        self.annotated_font_size = int(self.config.get("annotated_font_size", 14))
+        self.annotated_show_confidence = bool(self.config.get("annotated_show_confidence", True))
+        self.labeler = None
+        self.force_fallback_label = False
+        if self.use_vlm_labeler:
+            self.labeler = VLMLabeler(self.config.get("labeler", {}))
+            if not self.labeler.is_available():
+                print("[DetectPipeline] VLM labeler unavailable. Falling back to fallback labels.")
+                self.labeler = None
+                self.force_fallback_label = True
 
     def run(self, images: list[ImageItem]) -> list[dict]:
         """
@@ -73,21 +94,66 @@ class DetectPipeline(PipelineStep):
                 bboxes = bbox_map.get(idx, [])  # path 없으면 빈 리스트
                 crop_paths = []
 
-                if bboxes and self.save_crops and img_item.path:
+                if bboxes and img_item.path and (self.save_crops or self.labeler or self.force_fallback_label):
                     for crop_idx, bbox in enumerate(bboxes):
-                        # 고유 크롭 경로 정의: data/crops/{label}/{image_id}_{idx}.jpg
-                        # 경로를 위한 레이블 정리
-                        label_clean = "".join(c for c in bbox.label if c.isalnum() or c in (' ', '_', '-')).strip()
+                        label = bbox.label
+                        crop_img = None
 
-                        crop_filename = f"{img_item.id}_{crop_idx}.jpg"
-                        crop_path = Path("data/crops") / label_clean / crop_filename
+                        if self.force_fallback_label:
+                            label = self.labeler_fallback_label
+                            bbox.label = label
 
-                        try:
-                            success = crop_image(img_item.path, bbox, crop_path, padding=self.crop_padding)
-                            if success:
-                                crop_paths.append(str(crop_path))
-                        except Exception as e:
-                            print(f"\n[DetectPipeline] Crop failed for {img_item.path}: {e}")
+                        if self.labeler:
+                            crop_img = crop_image_to_pil(img_item.path, bbox, padding=self.crop_padding)
+                            if crop_img:
+                                label, _ = self.labeler.label_image(crop_img)
+                            else:
+                                label = self.labeler_fallback_label
+                            bbox.label = label
+
+                        if self.save_crops:
+                            # 고유 크롭 경로 정의: data/crops/{label}/{image_id}_{idx}.jpg
+                            # 경로를 위한 레이블 정리
+                            label_clean = "".join(c for c in label if c.isalnum() or c in (" ", "_", "-")).strip()
+                            if not label_clean:
+                                label_clean = self.labeler_fallback_label
+
+                            crop_filename = f"{img_item.id}_{crop_idx}.jpg"
+                            crop_path = Path("data/crops") / label_clean / crop_filename
+
+                            try:
+                                if crop_img:
+                                    crop_path.parent.mkdir(parents=True, exist_ok=True)
+                                    crop_img.save(crop_path)
+                                    crop_paths.append(str(crop_path))
+                                else:
+                                    success = crop_image(img_item.path, bbox, crop_path, padding=self.crop_padding)
+                                    if success:
+                                        crop_paths.append(str(crop_path))
+                            except Exception as e:
+                                print(f"\n[DetectPipeline] Crop failed for {img_item.path}: {e}")
+
+                        if crop_img:
+                            try:
+                                crop_img.close()
+                            except Exception:
+                                pass
+                annotated_path = None
+                if self.save_annotated and img_item.path and bboxes:
+                    image_stem = img_item.id or Path(img_item.path).stem
+                    annotated_file = f"{image_stem}.jpg"
+                    annotated_output = Path(self.annotated_dir) / annotated_file
+                    success = draw_bboxes(
+                        img_item.path,
+                        bboxes,
+                        annotated_output,
+                        color=self.annotated_box_color,
+                        width=self.annotated_line_width,
+                        font_size=self.annotated_font_size,
+                        show_confidence=self.annotated_show_confidence,
+                    )
+                    if success:
+                        annotated_path = str(annotated_output)
 
                 # 결과 항목 생성 (모든 이미지에 대해)
                 result_entry = {
@@ -100,7 +166,8 @@ class DetectPipeline(PipelineStep):
                             "xyxy": b.xyxy
                         } for b in bboxes
                     ],
-                    "crop_paths": crop_paths
+                    "crop_paths": crop_paths,
+                    "annotated_path": annotated_path,
                 }
                 results.append(result_entry)
 

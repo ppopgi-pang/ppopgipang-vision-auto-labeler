@@ -4,3 +4,29 @@ classes: null  # null for all classes, or list [0, 1, 2] for person, bicycle, ca
 save_crops: true
 crop_padding: 0
 batch_size: 16  # YOLO batch processing (8-16 recommended for T4)
+
+# Debug visualization (annotated images)
+save_annotated: false
+annotated_dir: "data/annotated"
+annotated_box_color: [0, 255, 0]
+annotated_line_width: 2
+annotated_font_size: 14
+annotated_show_confidence: true
+
+# VLM labeler (for free-form class labels)
+use_vlm_labeler: true
+labeler_fallback_label: "unknown"
+labeler:
+  model: "gpt-4o-mini"
+  max_tokens: 120
+  temperature: 0.0
+  default_label: "unknown"
+  system_prompt: |
+    You are a vision classifier specialized in character labeling.
+    Given an image of a character, identify the character shown in the image.
+    Return a single class label representing the main character:
+    - Use 1~3 words
+    - Use lowercase or snake_case
+    - Be specific (e.g., character name or clear character type)
+    If the image is unclear, ambiguous, or the character cannot be confidently identified, return:
+    unknown.
