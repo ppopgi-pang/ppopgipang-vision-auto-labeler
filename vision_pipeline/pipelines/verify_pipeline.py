@@ -36,7 +36,7 @@ class VerifyPipeline(PipelineStep):
         입력: DetectPipeline의 출력 (딕셔너리 리스트)
         출력: LabelResult 리스트
         """
-        print(f"--- VerifyPipeline Start ({len(detection_results)} items) with async batch processing ---")
+        print(f"--- VerifyPipeline 시작 ({len(detection_results)}개 항목) 비동기 배치 처리 방식 ---")
 
         # 모든 (crop_path, label, image_id) 수집
         crop_data = []
@@ -54,13 +54,13 @@ class VerifyPipeline(PipelineStep):
                 crop_data.append((crop_path, bbox_label, image_id))
 
         total_crops = len(crop_data)
-        print(f"[VerifyPipeline] Total crops to verify: {total_crops}")
+        print(f"[VerifyPipeline] 검증할 크롭 총 개수: {total_crops}")
 
         if total_crops == 0:
-            print("--- VerifyPipeline Complete. No crops to verify. ---")
+            print("--- VerifyPipeline 완료. 검증할 크롭이 없습니다. ---")
             return []
 
-        # 문제 6 해결: Rate limit 고려한 배치 크기 축소
+        # Rate limit 고려한 배치 크기
         batch_size = self.config.get("batch_size", 8)  # 8개로 축소 (OpenAI rate limit 고려)
         rate_limit_delay = self.config.get("rate_limit_delay", 1.0)  # 배치 간 지연 (초)
         final_results = []
@@ -86,15 +86,15 @@ class VerifyPipeline(PipelineStep):
                         results.append(result)
 
                 except Exception as e:
-                    print(f"\n[VerifyPipeline] Batch {batch_idx} error: {e}, falling back to individual processing")
-                    # 문제 8 해결: 에러 복구
+                    print(f"\n[VerifyPipeline] 배치 {batch_idx} 오류: {e}, 개별 처리로 전환")
+                    # 에러 복구: 개별 처리
                     for crop_path, label, image_id in batch:
                         try:
                             result = self.verifier.verify_image(crop_path, label)
                             result.image_id = image_id
                             results.append(result)
                         except Exception as e2:
-                            print(f"\n[VerifyPipeline] Individual verification failed {crop_path}: {e2}")
+                            print(f"\n[VerifyPipeline] 개별 검증 실패 {crop_path}: {e2}")
                             results.append(LabelResult(
                                 image_id=image_id,
                                 crop_path=str(crop_path),
@@ -104,18 +104,18 @@ class VerifyPipeline(PipelineStep):
                                 confidence=0.0
                             ))
 
-                # 진행상황 출력 (문제 9 해결: 정확한 진행률)
+                # 진행상황 출력
                 processed = len(results)
                 verified_count = len([r for r in results if r.verified])
-                print(f"[VerifyPipeline] Verified {processed}/{total_crops} (confirmed: {verified_count}, batch: {batch_idx}/{num_batches})...", end="\r", flush=True)
+                print(f"[VerifyPipeline] 검증됨 {processed}/{total_crops} (확인됨: {verified_count}, 배치: {batch_idx}/{num_batches})...", end="\r", flush=True)
 
-                # 문제 6 해결: Rate limit 방지를 위한 지연
+                # Rate limit 방지를 위한 지연
                 if batch_idx < num_batches and rate_limit_delay > 0:
                     await asyncio.sleep(rate_limit_delay)
 
             return results
 
-        # 문제 5 해결: Colab/Jupyter 환경에서 asyncio.run() 충돌 방지
+        # Colab/Jupyter 환경에서 asyncio.run() 충돌 방지
         try:
             # 이미 실행 중인 이벤트 루프가 있는지 확인
             loop = asyncio.get_event_loop()
@@ -124,15 +124,15 @@ class VerifyPipeline(PipelineStep):
                 if NESTED_ASYNCIO_AVAILABLE:
                     final_results = asyncio.run(run_async())
                 else:
-                    # nest_asyncio 없으면 ThreadPoolExecutor로 fallback
-                    print("[VerifyPipeline] Warning: nest_asyncio not available, using synchronous fallback")
+                    # nest_asyncio 없으면 동기 처리로 fallback
+                    print("[VerifyPipeline] 경고: nest_asyncio를 사용할 수 없습니다. 동기 처리로 전환합니다.")
                     final_results = self._run_sync_fallback(crop_data)
             else:
                 # 일반 환경
                 final_results = asyncio.run(run_async())
         except RuntimeError as e:
             # asyncio.run() 실패 시 동기 처리로 fallback
-            print(f"[VerifyPipeline] Async execution failed: {e}, using synchronous fallback")
+            print(f"[VerifyPipeline] 비동기 실행 실패: {e}, 동기 처리로 전환합니다.")
             final_results = self._run_sync_fallback(crop_data)
 
         print()
@@ -141,7 +141,7 @@ class VerifyPipeline(PipelineStep):
         self.store.save([r.to_dict() for r in final_results], output_path)
 
         verified_count = len([r for r in final_results if r.verified])
-        print(f"--- VerifyPipeline Complete. Verified {verified_count}/{len(final_results)} items. ---")
+        print(f"--- VerifyPipeline 완료. {verified_count}/{len(final_results)}개 항목 검증됨. ---")
         return final_results
 
     def _run_sync_fallback(self, crop_data: list[tuple[str, str, str]]) -> list[LabelResult]:
@@ -155,7 +155,7 @@ class VerifyPipeline(PipelineStep):
                 result.image_id = image_id
                 results.append(result)
             except Exception as e:
-                print(f"\n[VerifyPipeline] Sync verification failed {crop_path}: {e}")
+                print(f"\n[VerifyPipeline] 동기 검증 실패 {crop_path}: {e}")
                 results.append(LabelResult(
                     image_id=image_id,
                     crop_path=str(crop_path),
@@ -166,6 +166,6 @@ class VerifyPipeline(PipelineStep):
                 ))
 
             verified_count = len([r for r in results if r.verified])
-            print(f"[VerifyPipeline] Verified {idx}/{total} (confirmed: {verified_count})...", end="\r", flush=True)
+            print(f"[VerifyPipeline] 검증됨 {idx}/{total} (확인됨: {verified_count})...", end="\r", flush=True)
 
         return results
