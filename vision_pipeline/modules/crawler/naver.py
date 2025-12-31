@@ -4,10 +4,14 @@ from domain.image import ImageItem
 
 from config import settings
 from playwright.sync_api import sync_playwright
+from modules.crawler.utils import run_sync_in_thread_if_event_loop
 import time
 
 class NaverCrawler(Crawler):
     def fetch(self, keywords: List[str]) -> List[ImageItem]:
+        return run_sync_in_thread_if_event_loop(self._fetch_sync, keywords)
+
+    def _fetch_sync(self, keywords: List[str]) -> List[ImageItem]:
         print(f"[NaverCrawler] Fetching for {keywords}...")
         
         image_items = []
