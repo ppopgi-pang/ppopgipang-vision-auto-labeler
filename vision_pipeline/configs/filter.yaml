@@ -14,6 +14,5 @@ quality:
 classifier:
   model_name: "openai/clip-vit-base-patch32"
   threshold: 0.3 # Probability threshold
-  device: "mps" # Enable MPS for Mac
+  device: "auto"
   target_class: "toy" # Default fallback
-

@@ -12,11 +12,31 @@ class Classifier(FilterStep):
         self.config = config
         self.model_name = config.get("model_name", "openai/clip-vit-base-patch32")
         self.threshold = config.get("threshold", 0.2)
-        self.device = config.get("device", "cpu")
-        
+        self.device = config.get("device", "auto")
+
+        if self.device == "auto":
+            if torch.cuda.is_available():
+                self.device = "cuda"
+            elif torch.backends.mps.is_available():
+                self.device = "mps"
+            else:
+                self.device = "cpu"
+
+        if self.device == "cuda" and not torch.cuda.is_available():
+            if torch.backends.mps.is_available():
+                print("[Classifier] CUDA not available, falling back to MPS")
+                self.device = "mps"
+            else:
+                print("[Classifier] CUDA not available, falling back to CPU")
+                self.device = "cpu"
+
         if self.device == "mps" and not torch.backends.mps.is_available():
-             print("[Classifier] MPS not available, falling back to CPU")
-             self.device = "cpu"
+            if torch.cuda.is_available():
+                print("[Classifier] MPS not available, falling back to CUDA")
+                self.device = "cuda"
+            else:
+                print("[Classifier] MPS not available, falling back to CPU")
+                self.device = "cpu"
 
         print(f"[Classifier] Loading CLIP model: {self.model_name} on {self.device}...")
         try:
