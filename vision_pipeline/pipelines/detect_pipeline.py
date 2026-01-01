@@ -9,6 +9,7 @@ from modules.detector.yolo_world import YoloDetector
 from modules.detector.bbox_utils import crop_image, crop_image_to_pil, draw_bboxes
 from modules.storage.metadata_store import MetadataStore
 from modules.llm.labeler import VLMLabeler
+from modules.llm.verifier import LLMVerifier
 from modules.clip.candidate_generator import CLIPCandidateGenerator
 from domain.image import ImageItem
 
@@ -69,6 +70,24 @@ class DetectPipeline(PipelineStep):
                 print("[DetectPipeline] CLIP 후보 생성기를 사용할 수 없습니다. VLM 라벨링을 건너뜁니다.")
                 self.clip_candidate_generator = None
 
+        self.verifier = None
+        self.verifier_semaphore = None
+        self.verifier_confidence_threshold = None
+        verifier_config = self.config.get("verifier", {})
+        if bool(verifier_config.get("enabled", False)):
+            self.verifier_confidence_threshold = verifier_config.get("labeler_confidence_threshold")
+            if self.verifier_confidence_threshold is not None:
+                try:
+                    self.verifier_confidence_threshold = float(self.verifier_confidence_threshold)
+                except (TypeError, ValueError):
+                    self.verifier_confidence_threshold = None
+            verifier_max_concurrent = int(verifier_config.get("api_max_concurrent", 1))
+            self.verifier_semaphore = Semaphore(max(1, verifier_max_concurrent))
+            self.verifier = LLMVerifier(verifier_config)
+            if not self.verifier.client:
+                print("[DetectPipeline] Verifier를 사용할 수 없습니다. 검증을 건너뜁니다.")
+                self.verifier = None
+
     def _process_single_crop(self, img_path, bbox, crop_idx, img_id):
         """단일 크롭을 처리: 생성 → 라벨링 → 저장 (스레드 안전)"""
         label = bbox.label
@@ -108,7 +127,31 @@ class DetectPipeline(PipelineStep):
             elif not self.force_fallback_label and self.labeler and crop_img and not clip_candidates:
                 label = self.labeler_fallback_label
 
-            # 4. 크롭 저장
+            # 4. Verifier 검증 (valid/invalid 분기)
+            verified = None
+            verification_reason = None
+            verification_confidence = None
+            if self.verifier and crop_img and label != self.labeler_fallback_label:
+                # Skip verification if labeler_confidence is high enough
+                skip_verification = False
+                if self.verifier_confidence_threshold is not None and labeler_confidence is not None:
+                    if labeler_confidence >= self.verifier_confidence_threshold:
+                        skip_verification = True
+                        verified = True
+                        verification_reason = f"Skipped (labeler_confidence {labeler_confidence:.3f} >= {self.verifier_confidence_threshold:.3f})"
+
+                if not skip_verification:
+                    with self.verifier_semaphore:
+                        verification_result = self.verifier.verify_pil_image(crop_img, label)
+                        verified = verification_result.verified
+                        verification_reason = verification_result.reason
+                        verification_confidence = verification_result.confidence
+
+                        # invalid → unknown 분기
+                        if not verified:
+                            label = self.labeler_fallback_label
+
+            # 5. 크롭 저장
             if self.save_crops:
                 label_clean = "".join(c for c in label if c.isalnum() or c in (" ", "_", "-")).strip()
                 if not label_clean:
@@ -137,7 +180,7 @@ class DetectPipeline(PipelineStep):
                 except Exception:
                     pass
 
-        return crop_path_str, labeler_confidence, label, clip_candidates, clip_top1_score
+        return crop_path_str, labeler_confidence, label, clip_candidates, clip_top1_score, verified, verification_reason, verification_confidence
 
     def run(self, images: list[ImageItem]) -> list[dict]:
         """
@@ -193,6 +236,9 @@ class DetectPipeline(PipelineStep):
                     labeler_confidences = [None] * len(bboxes)
                     clip_candidates_list = [None] * len(bboxes)
                     clip_top1_scores = [None] * len(bboxes)
+                    verifieds = [None] * len(bboxes)
+                    verification_reasons = [None] * len(bboxes)
+                    verification_confidences = [None] * len(bboxes)
 
                     if bboxes and img_item.path and (self.save_crops or self.labeler or self.force_fallback_label):
                         # 병렬 처리: 모든 crops를 ThreadPoolExecutor로 처리
@@ -212,12 +258,15 @@ class DetectPipeline(PipelineStep):
                             for future in as_completed(futures):
                                 crop_idx = futures[future]
                                 try:
-                                    crop_path_str, labeler_confidence, label, clip_candidates, clip_top1_score = future.result()
+                                    crop_path_str, labeler_confidence, label, clip_candidates, clip_top1_score, verified, verification_reason, verification_confidence = future.result()
                                     if crop_path_str:
                                         crop_paths.append(crop_path_str)
                                     labeler_confidences[crop_idx] = labeler_confidence
                                     clip_candidates_list[crop_idx] = clip_candidates
                                     clip_top1_scores[crop_idx] = clip_top1_score
+                                    verifieds[crop_idx] = verified
+                                    verification_reasons[crop_idx] = verification_reason
+                                    verification_confidences[crop_idx] = verification_confidence
                                     # 메인 스레드에서 bbox.label 업데이트 (스레드 안전)
                                     if label:
                                         bboxes[crop_idx].label = label
@@ -254,6 +303,9 @@ class DetectPipeline(PipelineStep):
                                 "labeler_confidence": labeler_confidences[i],
                                 "clip_candidates": clip_candidates_list[i],
                                 "clip_top1_score": clip_top1_scores[i],
+                                "verified": verifieds[i],
+                                "verification_reason": verification_reasons[i],
+                                "verification_confidence": verification_confidences[i],
                             } for i, b in enumerate(bboxes)
                         ],
                         "crop_paths": crop_paths,

@@ -2,7 +2,9 @@ import os
 import base64
 import json
 import asyncio
+import io
 from pathlib import Path
+from PIL import Image
 from openai import OpenAI, AsyncOpenAI
 from dotenv import load_dotenv
 from domain.label import LabelResult
@@ -31,6 +33,12 @@ class LLMVerifier:
     def _encode_image(self, image_path: str):
         with open(image_path, "rb") as image_file:
             return base64.b64encode(image_file.read()).decode('utf-8')
+
+    def _encode_pil_image(self, image: Image.Image) -> str:
+        """PIL 이미지를 base64로 인코딩"""
+        buffer = io.BytesIO()
+        image.convert("RGB").save(buffer, format="JPEG", quality=90)
+        return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
     def verify_image(self, image_path: str | Path, label: str) -> LabelResult:
         if not self.client:
@@ -84,6 +92,65 @@ class LLMVerifier:
             return LabelResult(
                 image_id="",
                 crop_path=str(image_path),
+                verified=False,
+                label=label,
+                reason=f"Error: {e}",
+                confidence=0.0
+            )
+
+    def verify_pil_image(self, image: Image.Image, label: str) -> LabelResult:
+        """PIL 이미지를 검증"""
+        if not self.client:
+            return LabelResult(image_id="", crop_path="", verified=False, label=label, reason="No API Key/Client", confidence=0.0)
+
+        try:
+            base64_image = self._encode_pil_image(image)
+
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": self.system_prompt
+                    },
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"Is this a {label}? Respond in JSON."
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{base64_image}"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
+                response_format={ "type": "json_object" }
+            )
+
+            content = response.choices[0].message.content
+            result_json = json.loads(content)
+
+            return LabelResult(
+                image_id="",
+                crop_path="",
+                verified=result_json.get("verified", False),
+                label=label,
+                reason=result_json.get("reason", "No reason provided"),
+                confidence=result_json.get("confidence", 0.0)
+            )
+
+        except Exception as e:
+            print(f"[LLMVerifier] Error verifying PIL image: {e}")
+            return LabelResult(
+                image_id="",
+                crop_path="",
                 verified=False,
                 label=label,
                 reason=f"Error: {e}",
