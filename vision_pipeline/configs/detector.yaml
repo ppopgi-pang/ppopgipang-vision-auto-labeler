@@ -36,8 +36,8 @@ clip_candidate:
   enabled: true
   model_name: "openai/clip-vit-base-patch32"
   device: "auto"
-  top_k: 5
-  top1_threshold: 0.55
+  top_k: 20
+  top1_threshold: 0.40
   prompt_templates:
     - "a plush toy of {character_name}"
     - "a stuffed doll representing {character_name}"
