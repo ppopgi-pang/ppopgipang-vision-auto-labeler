@@ -6,10 +6,13 @@ tqdm>=4.67.0
 # Image processing
 Pillow>=10.0.0
 imagehash>=4.3.0
+numpy>=1.26.0
+opencv-python-headless>=4.9.0
 
 # Web scraping
 playwright>=1.40.0
 requests>=2.32.0
+nest_asyncio>=1.6.0
 
 # Machine Learning
 torch>=2.0.0
