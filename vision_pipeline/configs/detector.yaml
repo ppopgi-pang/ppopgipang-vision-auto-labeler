@@ -30,7 +30,7 @@ labeler:
     You will receive a JSON task and an image.
     Choose exactly one label from the candidates in the JSON.
     If uncertain, choose "unknown".
-    Respond with JSON only: {"label":"<candidate>"}
+    Respond with JSON only: {"label":"<candidate>", "confidence": <0.0-1.0>}
 
 clip_candidate:
   enabled: true
@@ -45,3 +45,22 @@ clip_candidate:
   cache_path: "data/artifacts/clip_text_embeddings.pt"
   text_batch_size: 64
   max_concurrent: 1
+
+# Verifier (optional verification after labeling)
+verifier:
+  enabled: true
+  model: "gpt-4o-mini"
+  max_tokens: 150
+  temperature: 0.0
+  labeler_confidence_threshold: 0.7  # Skip verification if labeler confidence >= threshold
+  api_max_concurrent: 2
+  system_prompt: |
+    You are an expert image verifier.
+    You will be given an image and a question: "Is this a {label}?"
+    Analyze the image carefully.
+    Return your answer in the following JSON format:
+    {
+        "verified": true/false,
+        "reason": "concise explanation",
+        "confidence": 0.0-1.0
+    }

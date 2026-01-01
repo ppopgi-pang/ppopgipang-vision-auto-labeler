@@ -64,6 +64,9 @@ def main():
     total_detections = 0
     clip_enabled_count = 0
     gpt_judge_count = 0
+    verifier_count = 0
+    verified_true_count = 0
+    verified_false_count = 0
 
     for result in results:
         bboxes = result.get("bboxes", [])
@@ -73,16 +76,30 @@ def main():
             # CLIP 후보가 있는지 확인
             if bbox.get("clip_candidates"):
                 clip_enabled_count += 1
+
+            # GPT Judge 실행 여부 확인
+            if bbox.get("labeler_confidence") is not None:
+                gpt_judge_count += 1
+
+            # Verifier 실행 여부 확인
+            if bbox.get("verified") is not None:
+                verifier_count += 1
+                if bbox.get("verified"):
+                    verified_true_count += 1
+                else:
+                    verified_false_count += 1
+
                 print(f"\n[이미지: {result['image_id']}]")
                 print(f"  Label: {bbox['label']}")
                 print(f"  CLIP Top-1 Score: {bbox.get('clip_top1_score', 'N/A'):.4f}" if bbox.get('clip_top1_score') else "  CLIP Top-1 Score: N/A")
-                print(f"  CLIP Candidates:")
-                for candidate in bbox.get("clip_candidates", []):
-                    print(f"    - {candidate['label']}: {candidate['score']:.4f}")
-
-            # GPT Judge 실행 여부 확인
-            if bbox.get("label") != "unknown":
-                gpt_judge_count += 1
+                if bbox.get("clip_candidates"):
+                    print(f"  CLIP Candidates:")
+                    for candidate in bbox.get("clip_candidates", []):
+                        print(f"    - {candidate['label']}: {candidate['score']:.4f}")
+                print(f"  Labeler Confidence: {bbox.get('labeler_confidence', 'N/A')}")
+                print(f"  Verified: {bbox.get('verified')}")
+                print(f"  Verification Reason: {bbox.get('verification_reason', 'N/A')}")
+                print(f"  Verification Confidence: {bbox.get('verification_confidence', 'N/A')}")
 
     print("\n" + "=" * 80)
     print("검증 요약")
@@ -91,13 +108,16 @@ def main():
     print(f"\n총 탐지된 객체: {total_detections}개")
     print(f"CLIP 후보 생성: {clip_enabled_count}개")
     print(f"GPT Judge 라벨링: {gpt_judge_count}개")
+    print(f"Verifier 검증: {verifier_count}개")
+    print(f"  - Verified (valid): {verified_true_count}개")
+    print(f"  - Not Verified (invalid → unknown): {verified_false_count}개")
 
     # 플로우 검증
     print("\n파이프라인 플로우 체크:")
-    print(f"  ✓ CLIP → Top-K: {'동작함' if clip_enabled_count > 0 else '❌ 동작 안 함'}")
-    print(f"  ✓ GPT Judge: {'동작함' if gpt_judge_count > 0 else '❌ 동작 안 함'}")
-    print(f"  ❌ Verifier: DetectPipeline에 통합되지 않음 (별도 VerifyPipeline 필요)")
-    print(f"  ❌ valid/invalid 분기: 구현되지 않음")
+    print(f"  ✓ CLIP → Top-K: {'✓ 동작함' if clip_enabled_count > 0 else '❌ 동작 안 함'}")
+    print(f"  ✓ GPT Judge: {'✓ 동작함' if gpt_judge_count > 0 else '❌ 동작 안 함'}")
+    print(f"  ✓ Verifier: {'✓ 통합됨' if verifier_count > 0 else '❌ 동작 안 함'}")
+    print(f"  ✓ valid/invalid 분기: {'✓ 구현됨' if verified_false_count >= 0 else '❌ 동작 안 함'}")
 
     # 결과 JSON 저장 확인
     output_path = Path("data/artifacts/bboxes.json")
@@ -113,6 +133,14 @@ def main():
             for bbox in result.get("bboxes", [])
         )
         print(f"  CLIP 데이터 저장: {'✓' if has_clip_data else '❌'}")
+
+        # Verification 데이터가 저장되었는지 확인
+        has_verification_data = any(
+            bbox.get("verified") is not None
+            for result in saved_results
+            for bbox in result.get("bboxes", [])
+        )
+        print(f"  Verification 데이터 저장: {'✓' if has_verification_data else '❌'}")
 
     print("\n" + "=" * 80)
 

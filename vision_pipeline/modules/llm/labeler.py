@@ -14,7 +14,7 @@ DEFAULT_SYSTEM_PROMPT = (
     "You are a final character selection judge. "
     "Choose exactly one label from the provided candidates. "
     "If uncertain, choose unknown. "
-    "Return only valid JSON with a single key: label."
+    "Return only valid JSON with two keys: label (string) and confidence (float 0.0-1.0)."
 )
 
 class VLMLabeler:
@@ -121,7 +121,16 @@ class VLMLabeler:
                 label = str(result_json.get("label") or self.default_label).strip()
                 if label not in candidate_list:
                     label = self.default_label
-                return label, None
+
+                # Extract confidence if available
+                confidence = result_json.get("confidence")
+                if confidence is not None:
+                    try:
+                        confidence = float(confidence)
+                    except (TypeError, ValueError):
+                        confidence = None
+
+                return label, confidence
             except Exception as e:
                 retry_delay = self._get_rate_limit_delay(e)
                 if retry_delay is not None and retries_left > 0:
