@@ -1,6 +1,7 @@
 from ultralytics import YOLO
 from pathlib import Path
 from PIL import Image
+import torch
 from domain.image import ImageItem
 from domain.bbox import BoundingBox
 
@@ -12,11 +13,40 @@ class YoloDetector:
         self.model_path = config.get("model_path", "yolov8n.pt")
         self.conf_threshold = config.get("conf_threshold", 0.5)
         self.classes = config.get("classes", None)  # 필터링할 클래스 인덱스 리스트, None = 모두
+        self.device = config.get("device", "auto")
 
-        print(f"[YoloDetector] {self.model_path}에서 모델 로딩 중...")
+        # GPU/CUDA 장치 자동 감지
+        if self.device == "auto":
+            if torch.cuda.is_available():
+                self.device = "cuda"
+            elif torch.backends.mps.is_available():
+                self.device = "mps"
+            else:
+                self.device = "cpu"
+
+        # 장치 가용성 확인 및 fallback
+        if self.device == "cuda" and not torch.cuda.is_available():
+            if torch.backends.mps.is_available():
+                print("[YoloDetector] CUDA not available, falling back to MPS")
+                self.device = "mps"
+            else:
+                print("[YoloDetector] CUDA not available, falling back to CPU")
+                self.device = "cpu"
+
+        if self.device == "mps" and not torch.backends.mps.is_available():
+            if torch.cuda.is_available():
+                print("[YoloDetector] MPS not available, falling back to CUDA")
+                self.device = "cuda"
+            else:
+                print("[YoloDetector] MPS not available, falling back to CPU")
+                self.device = "cpu"
+
+        print(f"[YoloDetector] {self.model_path}에서 모델 로딩 중... (device: {self.device})")
         try:
             self.model = YOLO(self.model_path)
-            print("[YoloDetector] 모델 로딩 완료.")
+            # YOLO 모델을 지정된 장치로 이동
+            self.model.to(self.device)
+            print(f"[YoloDetector] 모델 로딩 완료. (device: {self.device})")
         except Exception as e:
             print(f"[YoloDetector] 모델 로딩 실패: {e}")
             raise e
@@ -27,11 +57,12 @@ class YoloDetector:
             return []
 
         try:
-            # YOLO 추론 실행
+            # YOLO 추론 실행 (GPU 사용)
             results = self.model.predict(
                 source=str(image_item.path),
                 conf=self.conf_threshold,
                 classes=self.classes,
+                device=self.device,
                 verbose=False
             )
 
@@ -73,12 +104,13 @@ class YoloDetector:
             return [[] for _ in image_items]
 
         try:
-            # 배치 추론 실행 (경로 리스트 전달)
+            # 배치 추론 실행 (경로 리스트 전달, GPU 사용)
             sources = [str(item.path) for item in valid_items]
             results = self.model.predict(
                 source=sources,
                 conf=self.conf_threshold,
                 classes=self.classes,
+                device=self.device,
                 verbose=False
             )
 

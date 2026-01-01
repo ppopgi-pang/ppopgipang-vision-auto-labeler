@@ -2,6 +2,8 @@ import imagehash
 from PIL import Image
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor, as_completed
+import torch
+import torchvision.transforms.functional as TF
 from modules.filter.base import FilterStep
 from domain.image import ImageItem
 from config import settings
@@ -28,17 +30,32 @@ class Deduplicator(FilterStep):
         self.hash_size = config.get("hash_size", 8)
         self.threshold = config.get("threshold", 5)
         self.seen_hashes = []  # (image_item, hash_obj) 튜플의 리스트
+        self.use_gpu = config.get("use_gpu", False)  # GPU 사용 옵션 (실험적)
+        self.device = "cpu"
+
+        # GPU 사용 시 장치 설정
+        if self.use_gpu:
+            if torch.cuda.is_available():
+                self.device = "cuda"
+                print(f"[Deduplicator] GPU 모드 활성화 (device: {self.device})")
+            else:
+                print("[Deduplicator] GPU를 사용할 수 없어 CPU 모드로 fallback합니다.")
+                self.use_gpu = False
 
     def run(self, images: list[ImageItem]) -> list[ImageItem]:
         unique_images = []
         duplicates = 0
 
+        # 참고: imagehash 라이브러리는 CPU 기반이므로 ProcessPoolExecutor 사용이 최적입니다.
+        # GPU를 사용한 perceptual hashing은 복잡하고 imagehash와 호환성 문제가 있을 수 있습니다.
+        # 현재 ProcessPoolExecutor를 사용한 CPU 병렬화가 이 작업에 가장 효율적입니다.
         print(f"[Deduplicator] Processing {len(images)} images with ProcessPoolExecutor (bypassing GIL)...")
         total = len(images)
         if total == 0:
             return unique_images
 
         # CPU 코어 수에 맞춰 워커 수 조정 (일반적으로 CPU 코어 수)
+        # GPU를 사용하는 다른 작업(YOLO, CLIP)과 병렬로 실행되므로 워커 수를 적절히 조정
         max_workers = max(1, min(int(getattr(settings, "max_workers", 64)) // 4, 16))
         hash_results: list[tuple[ImageItem, imagehash.ImageHash | None, str | None]] = [None] * total
 
