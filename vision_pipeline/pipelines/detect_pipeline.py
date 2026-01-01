@@ -88,8 +88,10 @@ class DetectPipeline(PipelineStep):
                 crop_filename = f"{img_id}_{crop_idx}.jpg"
                 crop_path = Path("data/crops") / label_clean / crop_filename
 
+                # 디렉토리 먼저 생성 (crop_img 여부와 관계없이)
+                crop_path.parent.mkdir(parents=True, exist_ok=True)
+
                 if crop_img:
-                    crop_path.parent.mkdir(parents=True, exist_ok=True)
                     crop_img.save(crop_path)
                     crop_path_str = str(crop_path)
                 else:
