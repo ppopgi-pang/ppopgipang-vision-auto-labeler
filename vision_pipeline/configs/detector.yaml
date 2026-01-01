@@ -17,13 +17,14 @@ annotated_show_confidence: true
 use_vlm_labeler: true
 labeler_fallback_label: "unknown"
 labeler:
-  model: "gpt-4o-mini"
+  model: "gpt-4o"
   max_tokens: 300
   temperature: 0.0
   rate_limit_delay: 0.5  # Delay between labeler calls (seconds)
   rate_limit_max_retries: 2  # Retries on rate limit (429)
   rate_limit_retry_default_delay: 1.0  # Fallback delay if no retry hint (seconds)
   default_label: "unknown"
+  api_max_concurrent: 1
   system_prompt: |
     You are a vision classifier specialized in character labeling.
     Given an image of a character, identify the character shown in the image.
