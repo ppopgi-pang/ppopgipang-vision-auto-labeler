@@ -2,6 +2,7 @@ import time
 import yaml
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm import tqdm
 from pipelines.base import PipelineStep
 from modules.detector.yolo_world import YoloDetector
 from modules.detector.bbox_utils import crop_image, crop_image_to_pil, draw_bboxes
@@ -115,115 +116,116 @@ class DetectPipeline(PipelineStep):
         batch_size = self.config.get("batch_size", 16)  # YOLO 배치 크기 (8-16 권장)
 
         # 배치 단위로 처리
-        for batch_start in range(0, total, batch_size):
-            batch_end = min(batch_start + batch_size, total)
-            batch_items = images[batch_start:batch_end]
+        with tqdm(total=total, desc="객체 탐지", unit="img", position=1, leave=False) as pbar:
+            for batch_start in range(0, total, batch_size):
+                batch_end = min(batch_start + batch_size, total)
+                batch_items = images[batch_start:batch_end]
 
-            # path가 있는 항목과 인덱스 매핑
-            valid_items = []
-            valid_indices = []
-            for idx, img in enumerate(batch_items):
-                if img.path:
-                    valid_items.append(img)
-                    valid_indices.append(idx)
+                # path가 있는 항목과 인덱스 매핑
+                valid_items = []
+                valid_indices = []
+                for idx, img in enumerate(batch_items):
+                    if img.path:
+                        valid_items.append(img)
+                        valid_indices.append(idx)
 
-            # 배치 탐지 실행
-            if valid_items:
-                try:
-                    batch_bboxes = self.detector.detect_batch(valid_items)
-                except Exception as e:
-                    print(f"\n[DetectPipeline] 배치 검출 오류: {e}, 개별 처리로 전환")
-                    # 에러 복구: 개별 처리
-                    batch_bboxes = []
-                    for item in valid_items:
-                        try:
-                            bboxes = self.detector.detect(item)
-                            batch_bboxes.append(bboxes)
-                        except Exception as e2:
-                            print(f"\n[DetectPipeline] 개별 검출 실패 {item.path}: {e2}")
-                            batch_bboxes.append([])
-            else:
-                batch_bboxes = []
-
-            # 결과 처리: 모든 이미지에 대해 결과 생성 (path 없는 것도 포함)
-            bbox_map = dict(zip(valid_indices, batch_bboxes))
-
-            # 배치 내 모든 crops를 병렬 처리
-            total_crops_in_batch = 0
-            for idx, img_item in enumerate(batch_items):
-                bboxes = bbox_map.get(idx, [])
-                crop_paths = []
-                labeler_confidences = [None] * len(bboxes)
-
-                if bboxes and img_item.path and (self.save_crops or self.labeler or self.force_fallback_label):
-                    # 병렬 처리: 모든 crops를 ThreadPoolExecutor로 처리
-                    max_workers = min(len(bboxes), 10)  # 최대 10개 워커
-                    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                        futures = {
-                            executor.submit(
-                                self._process_single_crop,
-                                img_item.path,
-                                bbox,
-                                crop_idx,
-                                img_item.id
-                            ): crop_idx
-                            for crop_idx, bbox in enumerate(bboxes)
-                        }
-
-                        for future in as_completed(futures):
-                            crop_idx = futures[future]
+                # 배치 탐지 실행
+                if valid_items:
+                    try:
+                        batch_bboxes = self.detector.detect_batch(valid_items)
+                    except Exception as e:
+                        print(f"\n[DetectPipeline] 배치 검출 오류: {e}, 개별 처리로 전환")
+                        # 에러 복구: 개별 처리
+                        batch_bboxes = []
+                        for item in valid_items:
                             try:
-                                crop_path_str, labeler_confidence = future.result()
-                                if crop_path_str:
-                                    crop_paths.append(crop_path_str)
-                                labeler_confidences[crop_idx] = labeler_confidence
-                            except Exception as e:
-                                print(f"\n[DetectPipeline] 크롭 처리 오류: {e}")
+                                bboxes = self.detector.detect(item)
+                                batch_bboxes.append(bboxes)
+                            except Exception as e2:
+                                print(f"\n[DetectPipeline] 개별 검출 실패 {item.path}: {e2}")
+                                batch_bboxes.append([])
+                else:
+                    batch_bboxes = []
 
-                    total_crops_in_batch += len(bboxes)
-                annotated_path = None
-                if self.save_annotated and img_item.path and bboxes:
-                    image_stem = img_item.id or Path(img_item.path).stem
-                    annotated_file = f"{image_stem}.jpg"
-                    annotated_output = Path(self.annotated_dir) / annotated_file
-                    success = draw_bboxes(
-                        img_item.path,
-                        bboxes,
-                        annotated_output,
-                        color=self.annotated_box_color,
-                        width=self.annotated_line_width,
-                        font_size=self.annotated_font_size,
-                        show_confidence=self.annotated_show_confidence,
-                    )
-                    if success:
-                        annotated_path = str(annotated_output)
+                # 결과 처리: 모든 이미지에 대해 결과 생성 (path 없는 것도 포함)
+                bbox_map = dict(zip(valid_indices, batch_bboxes))
 
-                # 결과 항목 생성 (모든 이미지에 대해)
-                result_entry = {
-                    "image_id": img_item.id,
-                    "original_path": str(img_item.path) if img_item.path else None,
-                    "bboxes": [
-                        {
-                            "label": b.label,
-                            "confidence": b.confidence,
-                            "xyxy": b.xyxy,
-                            "labeler_confidence": labeler_confidences[i],
-                        } for i, b in enumerate(bboxes)
-                    ],
-                    "crop_paths": crop_paths,
-                    "annotated_path": annotated_path,
-                }
-                results.append(result_entry)
+                # 배치 내 모든 crops를 병렬 처리
+                total_crops_in_batch = 0
+                for idx, img_item in enumerate(batch_items):
+                    bboxes = bbox_map.get(idx, [])
+                    crop_paths = []
+                    labeler_confidences = [None] * len(bboxes)
 
-            # 배치 처리 후 rate limit delay 적용 (배치 내 모든 crops에 대해)
-            if self.labeler_rate_limit_delay > 0 and total_crops_in_batch > 0:
-                batch_delay = self.labeler_rate_limit_delay * total_crops_in_batch
-                time.sleep(batch_delay)
+                    if bboxes and img_item.path and (self.save_crops or self.labeler or self.force_fallback_label):
+                        # 병렬 처리: 모든 crops를 ThreadPoolExecutor로 처리
+                        max_workers = min(len(bboxes), 10)  # 최대 10개 워커
+                        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                            futures = {
+                                executor.submit(
+                                    self._process_single_crop,
+                                    img_item.path,
+                                    bbox,
+                                    crop_idx,
+                                    img_item.id
+                                ): crop_idx
+                                for crop_idx, bbox in enumerate(bboxes)
+                            }
 
-            # 진행상황 출력
-            processed = min(batch_end, total)
-            detected_count = sum(1 for r in results if r["bboxes"])
-            print(f"[DetectPipeline] 처리됨 {processed}/{total} (검출됨: {detected_count})...", end="\r", flush=True)
+                            for future in as_completed(futures):
+                                crop_idx = futures[future]
+                                try:
+                                    crop_path_str, labeler_confidence = future.result()
+                                    if crop_path_str:
+                                        crop_paths.append(crop_path_str)
+                                    labeler_confidences[crop_idx] = labeler_confidence
+                                except Exception as e:
+                                    print(f"\n[DetectPipeline] 크롭 처리 오류: {e}")
+
+                        total_crops_in_batch += len(bboxes)
+                    annotated_path = None
+                    if self.save_annotated and img_item.path and bboxes:
+                        image_stem = img_item.id or Path(img_item.path).stem
+                        annotated_file = f"{image_stem}.jpg"
+                        annotated_output = Path(self.annotated_dir) / annotated_file
+                        success = draw_bboxes(
+                            img_item.path,
+                            bboxes,
+                            annotated_output,
+                            color=self.annotated_box_color,
+                            width=self.annotated_line_width,
+                            font_size=self.annotated_font_size,
+                            show_confidence=self.annotated_show_confidence,
+                        )
+                        if success:
+                            annotated_path = str(annotated_output)
+
+                    # 결과 항목 생성 (모든 이미지에 대해)
+                    result_entry = {
+                        "image_id": img_item.id,
+                        "original_path": str(img_item.path) if img_item.path else None,
+                        "bboxes": [
+                            {
+                                "label": b.label,
+                                "confidence": b.confidence,
+                                "xyxy": b.xyxy,
+                                "labeler_confidence": labeler_confidences[i],
+                            } for i, b in enumerate(bboxes)
+                        ],
+                        "crop_paths": crop_paths,
+                        "annotated_path": annotated_path,
+                    }
+                    results.append(result_entry)
+
+                # 배치 처리 후 rate limit delay 적용 (배치 내 모든 crops에 대해)
+                if self.labeler_rate_limit_delay > 0 and total_crops_in_batch > 0:
+                    batch_delay = self.labeler_rate_limit_delay * total_crops_in_batch
+                    time.sleep(batch_delay)
+
+                # 프로그레스바 업데이트
+                detected_count = sum(1 for r in results if r["bboxes"])
+                pbar.set_postfix_str(f"검출: {detected_count}")
+                pbar.update(len(batch_items))
 
         print()
         # 결과 저장
