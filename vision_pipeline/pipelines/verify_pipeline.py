@@ -3,6 +3,7 @@ import json
 import asyncio
 import time
 from pathlib import Path
+from tqdm import tqdm
 from pipelines.base import PipelineStep
 from modules.llm.verifier import LLMVerifier
 from modules.storage.metadata_store import MetadataStore
@@ -117,49 +118,51 @@ class VerifyPipeline(PipelineStep):
         async def run_async():
             num_batches = (len(verify_items) + batch_size - 1) // batch_size
 
-            for batch_idx, batch_start in enumerate(range(0, len(verify_items), batch_size), start=1):
-                batch_end = min(batch_start + batch_size, len(verify_items))
-                batch = verify_items[batch_start:batch_end]
+            # 세부 프로그레스바 (position=1: 전체 프로그레스바 아래, leave=False: 완료 후 제거)
+            with tqdm(total=len(verify_items), desc="검증", unit="crop", position=1, leave=False) as pbar:
+                for batch_idx, batch_start in enumerate(range(0, len(verify_items), batch_size), start=1):
+                    batch_end = min(batch_start + batch_size, len(verify_items))
+                    batch = verify_items[batch_start:batch_end]
 
-                # (crop_path, label) 튜플 리스트 생성
-                crop_label_pairs = [(crop_path, label) for _, crop_path, label, _ in batch]
+                    # (crop_path, label) 튜플 리스트 생성
+                    crop_label_pairs = [(crop_path, label) for _, crop_path, label, _ in batch]
 
-                try:
-                    # 배치 비동기 검증
-                    batch_results = await self.verifier.verify_batch_async(crop_label_pairs)
+                    try:
+                        # 배치 비동기 검증
+                        batch_results = await self.verifier.verify_batch_async(crop_label_pairs)
 
-                    # image_id 첨부
-                    for i, result in enumerate(batch_results):
-                        result.image_id = batch[i][3]  # image_id
-                        results_by_index[batch[i][0]] = result
+                        # image_id 첨부
+                        for i, result in enumerate(batch_results):
+                            result.image_id = batch[i][3]  # image_id
+                            results_by_index[batch[i][0]] = result
 
-                except Exception as e:
-                    print(f"\n[VerifyPipeline] 배치 {batch_idx} 오류: {e}, 개별 처리로 전환")
-                    # 에러 복구: 개별 처리
-                    for result_index, crop_path, label, image_id in batch:
-                        try:
-                            result = self.verifier.verify_image(crop_path, label)
-                            result.image_id = image_id
-                            results_by_index[result_index] = result
-                        except Exception as e2:
-                            print(f"\n[VerifyPipeline] 개별 검증 실패 {crop_path}: {e2}")
-                            results_by_index[result_index] = LabelResult(
-                                image_id=image_id,
-                                crop_path=str(crop_path),
-                                verified=False,
-                                label=label,
-                                reason=f"Error: {e2}",
-                                confidence=0.0
-                            )
+                    except Exception as e:
+                        print(f"\n[VerifyPipeline] 배치 {batch_idx} 오류: {e}, 개별 처리로 전환")
+                        # 에러 복구: 개별 처리
+                        for result_index, crop_path, label, image_id in batch:
+                            try:
+                                result = self.verifier.verify_image(crop_path, label)
+                                result.image_id = image_id
+                                results_by_index[result_index] = result
+                            except Exception as e2:
+                                print(f"\n[VerifyPipeline] 개별 검증 실패 {crop_path}: {e2}")
+                                results_by_index[result_index] = LabelResult(
+                                    image_id=image_id,
+                                    crop_path=str(crop_path),
+                                    verified=False,
+                                    label=label,
+                                    reason=f"Error: {e2}",
+                                    confidence=0.0
+                                )
 
-                # 진행상황 출력
-                processed = len([r for r in results_by_index if r is not None])
-                verified_count = len([r for r in results_by_index if r is not None and r.verified])
-                print(f"[VerifyPipeline] 검증됨 {processed}/{total_crops} (확인됨: {verified_count}, 배치: {batch_idx}/{num_batches})...", end="\r", flush=True)
+                    # 프로그레스바 업데이트
+                    verified_count = len([r for r in results_by_index if r is not None and r.verified])
+                    pbar.set_postfix_str(f"확인: {verified_count}")
+                    pbar.update(len(batch))
 
-                # Rate limit 방지를 위한 지연
-                if batch_idx < num_batches and rate_limit_delay > 0:
-                    await asyncio.sleep(rate_limit_delay)
+                    # Rate limit 방지를 위한 지연
+                    if batch_idx < num_batches and rate_limit_delay > 0:
+                        await asyncio.sleep(rate_limit_delay)
 
             return results_by_index
 
@@ -196,26 +199,26 @@ class VerifyPipeline(PipelineStep):
 
     def _run_sync_fallback(self, verify_items: list[tuple[int, str, str, str]], results_by_index: list[LabelResult | None], total_crops: int) -> list[LabelResult]:
         """동기 처리 fallback (asyncio 실패 시)"""
-        total = len(verify_items)
+        # 세부 프로그레스바 (position=1: 전체 프로그레스바 아래, leave=False: 완료 후 제거)
+        with tqdm(total=len(verify_items), desc="검증 (동기)", unit="crop", position=1, leave=False) as pbar:
+            for idx, (result_index, crop_path, label, image_id) in enumerate(verify_items, start=1):
+                try:
+                    result = self.verifier.verify_image(crop_path, label)
+                    result.image_id = image_id
+                    results_by_index[result_index] = result
+                except Exception as e:
+                    print(f"\n[VerifyPipeline] 동기 검증 실패 {crop_path}: {e}")
+                    results_by_index[result_index] = LabelResult(
+                        image_id=image_id,
+                        crop_path=str(crop_path),
+                        verified=False,
+                        label=label,
+                        reason=f"Error: {e}",
+                        confidence=0.0
+                    )
 
-        for idx, (result_index, crop_path, label, image_id) in enumerate(verify_items, start=1):
-            try:
-                result = self.verifier.verify_image(crop_path, label)
-                result.image_id = image_id
-                results_by_index[result_index] = result
-            except Exception as e:
-                print(f"\n[VerifyPipeline] 동기 검증 실패 {crop_path}: {e}")
-                results_by_index[result_index] = LabelResult(
-                    image_id=image_id,
-                    crop_path=str(crop_path),
-                    verified=False,
-                    label=label,
-                    reason=f"Error: {e}",
-                    confidence=0.0
-                )
-
-            processed = len([r for r in results_by_index if r is not None])
-            verified_count = len([r for r in results_by_index if r is not None and r.verified])
-            print(f"[VerifyPipeline] 검증됨 {processed}/{total_crops} (확인됨: {verified_count})...", end="\r", flush=True)
+                verified_count = len([r for r in results_by_index if r is not None and r.verified])
+                pbar.set_postfix_str(f"확인: {verified_count}")
+                pbar.update(1)
 
         return [r for r in results_by_index if r is not None]

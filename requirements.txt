@@ -1,0 +1,29 @@
+# Core dependencies
+PyYAML>=6.0.1
+python-dotenv>=1.0.0
+tqdm>=4.67.0
+
+# Image processing
+Pillow>=10.0.0
+imagehash>=4.3.0
+
+# Web scraping
+playwright>=1.40.0
+requests>=2.32.0
+
+# Machine Learning
+torch>=2.0.0
+torchvision>=0.15.0
+ultralytics>=8.0.0
+transformers>=4.35.0
+
+# API clients
+openai>=1.0.0
+
+# Data validation
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+
+# Testing (optional)
+pytest>=7.4.0
+pytest-asyncio>=0.21.0

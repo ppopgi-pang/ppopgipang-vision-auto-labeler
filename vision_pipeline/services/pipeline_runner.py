@@ -1,5 +1,6 @@
 import yaml
 from pathlib import Path
+from tqdm import tqdm
 from domain.job import Job
 from pipelines.crawl_pipeline import CrawlPipeline
 from pipelines.filter_pipeline import FilterPipeline
@@ -35,70 +36,83 @@ class PipelineRunner:
         self._update_job_status(job, "running")
         print(f"[{job.job_id}] {job.keywords}에 대한 Pipeline Runner 시작...")
 
-        # 1. 크롤링
+        # 활성화된 단계 계산
+        stages = []
         if self.stage_config.get("crawl", True):
-            print("\n>>> 단계 1: 크롤링")
-            self._update_job_status(job, "crawling")
-            images = self.crawl_pipeline.run(job)
-        else:
-            print("\n>>> 단계 1: 크롤링 (건너뜀)")
-            self._update_job_status(job, "crawling_skipped")
-            # 건너뛸 경우 이전 단계에서 로드해야 하는가?
-            # 현재로서는 건너뛰면 기존 데이터를 로드하지 않는 한 진행할 수 없다고 가정.
-            # 하지만 일반적으로 이 MVP에서는 모두 실행하거나 아무것도 실행하지 않는다고 가정.
-            images = []
-
-        if not images and self.stage_config.get("crawl", True):
-            self._update_job_status(job, "stopped_no_images")
-            print("이미지를 찾거나 크롤링하지 못했습니다. 중지합니다.")
-            return
-
-        # 2. 필터링
+            stages.append(("크롤링", "crawl"))
         if self.stage_config.get("filter", True):
-            print("\n>>> 단계 2: 필터링")
-            self._update_job_status(job, "filtering")
-            # 분류기가 대상 클래스에 대해 확인하도록 보장
-            # 분류기 설정에 대상 클래스를 동적으로 주입해야 할 수도 있음?
-            # 또는 누락된 경우 images.keyword를 job.target_class로 업데이트
-            for img in images:
-                if not img.keyword:
-                    img.keyword = job.target_class
-
-            filtered_images = self.filter_pipeline.run(images)
-        else:
-             print("\n>>> 단계 2: 필터링 (건너뜀)")
-             self._update_job_status(job, "filtering_skipped")
-             filtered_images = images  # 건너뛸 경우 통과
-
-        if not filtered_images:
-            self._update_job_status(job, "stopped_no_filtered")
-            print("필터링 후 남은 이미지가 없습니다. 중지합니다.")
-            return
-
-        # 3. 객체 탐지
+            stages.append(("필터링", "filter"))
         if self.stage_config.get("detect", True):
-            print("\n>>> 단계 3: 객체 탐지")
-            self._update_job_status(job, "detecting")
-            detection_results = self.detect_pipeline.run(filtered_images)
-        else:
-            print("\n>>> 단계 3: 객체 탐지 (건너뜀)")
-            self._update_job_status(job, "detecting_skipped")
-            detection_results = []
-
-        if not detection_results:
-             self._update_job_status(job, "stopped_no_detections")
-             print("탐지된 객체가 없습니다. 중지합니다.")
-             return
-
-        # 4. 검증
+            stages.append(("객체 탐지", "detect"))
         if self.stage_config.get("verify", True):
-             print("\n>>> 단계 4: 검증")
-             self._update_job_status(job, "verifying")
-             verification_results = self.verify_pipeline.run(detection_results)
-        else:
-             print("\n>>> 단계 4: 검증 (건너뜀)")
-             self._update_job_status(job, "verifying_skipped")
-             verification_results = []
+            stages.append(("검증", "verify"))
+
+        # 전체 파이프라인 프로그레스바 (position=0: 최상위, leave=True: 완료 후에도 유지)
+        with tqdm(total=len(stages), desc="전체 파이프라인 진행", unit="단계", position=0, leave=True, bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]') as pbar:
+            images = []
+            filtered_images = []
+            detection_results = []
+            verification_results = []
+
+            # 1. 크롤링
+            if self.stage_config.get("crawl", True):
+                pbar.set_description("단계 1/4: 크롤링")
+                self._update_job_status(job, "crawling")
+                images = self.crawl_pipeline.run(job)
+                pbar.update(1)
+
+                if not images:
+                    self._update_job_status(job, "stopped_no_images")
+                    print("\n이미지를 찾거나 크롤링하지 못했습니다. 중지합니다.")
+                    return
+            else:
+                self._update_job_status(job, "crawling_skipped")
+                images = []
+
+            # 2. 필터링
+            if self.stage_config.get("filter", True):
+                pbar.set_description("단계 2/4: 필터링")
+                self._update_job_status(job, "filtering")
+                # 분류기가 대상 클래스에 대해 확인하도록 보장
+                for img in images:
+                    if not img.keyword:
+                        img.keyword = job.target_class
+
+                filtered_images = self.filter_pipeline.run(images)
+                pbar.update(1)
+
+                if not filtered_images:
+                    self._update_job_status(job, "stopped_no_filtered")
+                    print("\n필터링 후 남은 이미지가 없습니다. 중지합니다.")
+                    return
+            else:
+                self._update_job_status(job, "filtering_skipped")
+                filtered_images = images
+
+            # 3. 객체 탐지
+            if self.stage_config.get("detect", True):
+                pbar.set_description("단계 3/4: 객체 탐지")
+                self._update_job_status(job, "detecting")
+                detection_results = self.detect_pipeline.run(filtered_images)
+                pbar.update(1)
+
+                if not detection_results:
+                    self._update_job_status(job, "stopped_no_detections")
+                    print("\n탐지된 객체가 없습니다. 중지합니다.")
+                    return
+            else:
+                self._update_job_status(job, "detecting_skipped")
+                detection_results = []
+
+            # 4. 검증
+            if self.stage_config.get("verify", True):
+                pbar.set_description("단계 4/4: 검증")
+                self._update_job_status(job, "verifying")
+                verification_results = self.verify_pipeline.run(detection_results)
+                pbar.update(1)
+            else:
+                self._update_job_status(job, "verifying_skipped")
+                verification_results = []
 
         print(f"\n[{job.job_id}] 파이프라인 완료.")
 

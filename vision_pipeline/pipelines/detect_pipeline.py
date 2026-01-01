@@ -1,6 +1,9 @@
 import time
 import yaml
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Semaphore
+from tqdm import tqdm
 from pipelines.base import PipelineStep
 from modules.detector.yolo_world import YoloDetector
 from modules.detector.bbox_utils import crop_image, crop_image_to_pil, draw_bboxes
@@ -12,17 +15,17 @@ class DetectPipeline(PipelineStep):
     def __init__(self, config_path: str = "configs/detector.yaml"):
         project_root = Path(__file__).resolve().parent.parent
         config_file = project_root / config_path
-        
+
         if config_file.exists():
             with open(config_file) as f:
                 self.config = yaml.safe_load(f)
         else:
             print(f"경고: 설정 파일 {config_file}을 찾을 수 없습니다. 기본값을 사용합니다.")
             self.config = {}
-            
+
         self.detector = YoloDetector(self.config)
         self.store = MetadataStore()
-        
+
         self.save_crops = self.config.get("save_crops", True)
         self.crop_padding = self.config.get("crop_padding", 0)
         self.use_vlm_labeler = self.config.get("use_vlm_labeler", False)
@@ -39,15 +42,71 @@ class DetectPipeline(PipelineStep):
         self.annotated_show_confidence = bool(self.config.get("annotated_show_confidence", True))
         self.labeler = None
         self.labeler_rate_limit_delay = 0.0
+        self.api_semaphore = None
         self.force_fallback_label = False
         if self.use_vlm_labeler:
             labeler_config = self.config.get("labeler", {})
             self.labeler_rate_limit_delay = float(labeler_config.get("rate_limit_delay", 0.0))
+            api_max_concurrent = int(labeler_config.get("api_max_concurrent", 1))
+            self.api_semaphore = Semaphore(api_max_concurrent)
             self.labeler = VLMLabeler(labeler_config)
             if not self.labeler.is_available():
                 print("[DetectPipeline] VLM 라벨러를 사용할 수 없습니다. 기본 라벨을 사용합니다.")
                 self.labeler = None
                 self.force_fallback_label = True
+
+    def _process_single_crop(self, img_path, bbox, crop_idx, img_id):
+        """단일 크롭을 처리: 생성 → 라벨링 → 저장 (스레드 안전)"""
+        label = bbox.label
+        crop_img = None
+        labeler_confidence = None
+        crop_path_str = None
+
+        try:
+            # 1. 크롭 생성
+            if self.force_fallback_label:
+                label = self.labeler_fallback_label
+
+            if self.labeler or self.save_crops:
+                crop_img = crop_image_to_pil(img_path, bbox, padding=self.crop_padding)
+
+            # 2. VLM 라벨링 (세마포어로 API 호출 제어)
+            if self.labeler and crop_img:
+                with self.api_semaphore:
+                    label, labeler_confidence = self.labeler.label_image(crop_img)
+                    if self.labeler_rate_limit_delay > 0:
+                        time.sleep(self.labeler_rate_limit_delay)
+            elif crop_img is None and not self.force_fallback_label:
+                label = self.labeler_fallback_label
+
+            # 3. 크롭 저장
+            if self.save_crops:
+                label_clean = "".join(c for c in label if c.isalnum() or c in (" ", "_", "-")).strip()
+                if not label_clean:
+                    label_clean = self.labeler_fallback_label
+
+                crop_filename = f"{img_id}_{crop_idx}.jpg"
+                crop_path = Path("data/crops") / label_clean / crop_filename
+
+                if crop_img:
+                    crop_path.parent.mkdir(parents=True, exist_ok=True)
+                    crop_img.save(crop_path)
+                    crop_path_str = str(crop_path)
+                else:
+                    success = crop_image(img_path, bbox, crop_path, padding=self.crop_padding)
+                    if success:
+                        crop_path_str = str(crop_path)
+
+        except Exception as e:
+            print(f"\n[DetectPipeline] 크롭 처리 실패 {img_path} (idx={crop_idx}): {e}")
+        finally:
+            if crop_img:
+                try:
+                    crop_img.close()
+                except Exception:
+                    pass
+
+        return crop_path_str, labeler_confidence, label
 
     def run(self, images: list[ImageItem]) -> list[dict]:
         """
@@ -60,130 +119,115 @@ class DetectPipeline(PipelineStep):
         total = len(images)
         batch_size = self.config.get("batch_size", 16)  # YOLO 배치 크기 (8-16 권장)
 
-        # 배치 단위로 처리
-        for batch_start in range(0, total, batch_size):
-            batch_end = min(batch_start + batch_size, total)
-            batch_items = images[batch_start:batch_end]
+        # 배치 단위로 처리 (position=1: 전체 프로그레스바 아래, leave=False: 완료 후 제거)
+        with tqdm(total=total, desc="객체 탐지", unit="img", position=1, leave=False) as pbar:
+            for batch_start in range(0, total, batch_size):
+                batch_end = min(batch_start + batch_size, total)
+                batch_items = images[batch_start:batch_end]
 
-            # path가 있는 항목과 인덱스 매핑
-            valid_items = []
-            valid_indices = []
-            for idx, img in enumerate(batch_items):
-                if img.path:
-                    valid_items.append(img)
-                    valid_indices.append(idx)
+                # path가 있는 항목과 인덱스 매핑
+                valid_items = []
+                valid_indices = []
+                for idx, img in enumerate(batch_items):
+                    if img.path:
+                        valid_items.append(img)
+                        valid_indices.append(idx)
 
-            # 배치 탐지 실행
-            if valid_items:
-                try:
-                    batch_bboxes = self.detector.detect_batch(valid_items)
-                except Exception as e:
-                    print(f"\n[DetectPipeline] 배치 검출 오류: {e}, 개별 처리로 전환")
-                    # 에러 복구: 개별 처리
+                # 배치 탐지 실행
+                if valid_items:
+                    try:
+                        batch_bboxes = self.detector.detect_batch(valid_items)
+                    except Exception as e:
+                        print(f"\n[DetectPipeline] 배치 검출 오류: {e}, 개별 처리로 전환")
+                        # 에러 복구: 개별 처리
+                        batch_bboxes = []
+                        for item in valid_items:
+                            try:
+                                bboxes = self.detector.detect(item)
+                                batch_bboxes.append(bboxes)
+                            except Exception as e2:
+                                print(f"\n[DetectPipeline] 개별 검출 실패 {item.path}: {e2}")
+                                batch_bboxes.append([])
+                else:
                     batch_bboxes = []
-                    for item in valid_items:
-                        try:
-                            bboxes = self.detector.detect(item)
-                            batch_bboxes.append(bboxes)
-                        except Exception as e2:
-                            print(f"\n[DetectPipeline] 개별 검출 실패 {item.path}: {e2}")
-                            batch_bboxes.append([])
-            else:
-                batch_bboxes = []
 
-            # 결과 처리: 모든 이미지에 대해 결과 생성 (path 없는 것도 포함)
-            bbox_map = dict(zip(valid_indices, batch_bboxes))
+                # 결과 처리: 모든 이미지에 대해 결과 생성 (path 없는 것도 포함)
+                bbox_map = dict(zip(valid_indices, batch_bboxes))
 
-            for idx, img_item in enumerate(batch_items):
-                bboxes = bbox_map.get(idx, [])  # path 없으면 빈 리스트
-                crop_paths = []
+                # 배치 내 모든 crops를 병렬 처리
+                total_crops_in_batch = 0
+                for idx, img_item in enumerate(batch_items):
+                    bboxes = bbox_map.get(idx, [])
+                    crop_paths = []
+                    labeler_confidences = [None] * len(bboxes)
 
-                labeler_confidences = [None] * len(bboxes)
-                if bboxes and img_item.path and (self.save_crops or self.labeler or self.force_fallback_label):
-                    for crop_idx, bbox in enumerate(bboxes):
-                        label = bbox.label
-                        crop_img = None
+                    if bboxes and img_item.path and (self.save_crops or self.labeler or self.force_fallback_label):
+                        # 병렬 처리: 모든 crops를 ThreadPoolExecutor로 처리
+                        max_workers = min(len(bboxes), 10)  # 최대 10개 워커
+                        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                            futures = {
+                                executor.submit(
+                                    self._process_single_crop,
+                                    img_item.path,
+                                    bbox,
+                                    crop_idx,
+                                    img_item.id
+                                ): crop_idx
+                                for crop_idx, bbox in enumerate(bboxes)
+                            }
 
-                        if self.force_fallback_label:
-                            label = self.labeler_fallback_label
-                            bbox.label = label
+                            for future in as_completed(futures):
+                                crop_idx = futures[future]
+                                try:
+                                    crop_path_str, labeler_confidence, label = future.result()
+                                    if crop_path_str:
+                                        crop_paths.append(crop_path_str)
+                                    labeler_confidences[crop_idx] = labeler_confidence
+                                    # 메인 스레드에서 bbox.label 업데이트 (스레드 안전)
+                                    if label:
+                                        bboxes[crop_idx].label = label
+                                except Exception as e:
+                                    print(f"\n[DetectPipeline] 크롭 처리 오류: {e}")
 
-                        if self.labeler:
-                            crop_img = crop_image_to_pil(img_item.path, bbox, padding=self.crop_padding)
-                            if crop_img:
-                                label, labeler_confidence = self.labeler.label_image(crop_img)
-                                labeler_confidences[crop_idx] = labeler_confidence
-                                if self.labeler_rate_limit_delay > 0:
-                                    time.sleep(self.labeler_rate_limit_delay)
-                            else:
-                                label = self.labeler_fallback_label
-                            bbox.label = label
+                        total_crops_in_batch += len(bboxes)
+                    annotated_path = None
+                    if self.save_annotated and img_item.path and bboxes:
+                        image_stem = img_item.id or Path(img_item.path).stem
+                        annotated_file = f"{image_stem}.jpg"
+                        annotated_output = Path(self.annotated_dir) / annotated_file
+                        success = draw_bboxes(
+                            img_item.path,
+                            bboxes,
+                            annotated_output,
+                            color=self.annotated_box_color,
+                            width=self.annotated_line_width,
+                            font_size=self.annotated_font_size,
+                            show_confidence=self.annotated_show_confidence,
+                        )
+                        if success:
+                            annotated_path = str(annotated_output)
 
-                        if self.save_crops:
-                            # 고유 크롭 경로 정의: data/crops/{label}/{image_id}_{idx}.jpg
-                            # 경로를 위한 레이블 정리
-                            label_clean = "".join(c for c in label if c.isalnum() or c in (" ", "_", "-")).strip()
-                            if not label_clean:
-                                label_clean = self.labeler_fallback_label
+                    # 결과 항목 생성 (모든 이미지에 대해)
+                    result_entry = {
+                        "image_id": img_item.id,
+                        "original_path": str(img_item.path) if img_item.path else None,
+                        "bboxes": [
+                            {
+                                "label": b.label,
+                                "confidence": b.confidence,
+                                "xyxy": b.xyxy,
+                                "labeler_confidence": labeler_confidences[i],
+                            } for i, b in enumerate(bboxes)
+                        ],
+                        "crop_paths": crop_paths,
+                        "annotated_path": annotated_path,
+                    }
+                    results.append(result_entry)
 
-                            crop_filename = f"{img_item.id}_{crop_idx}.jpg"
-                            crop_path = Path("data/crops") / label_clean / crop_filename
-
-                            try:
-                                if crop_img:
-                                    crop_path.parent.mkdir(parents=True, exist_ok=True)
-                                    crop_img.save(crop_path)
-                                    crop_paths.append(str(crop_path))
-                                else:
-                                    success = crop_image(img_item.path, bbox, crop_path, padding=self.crop_padding)
-                                    if success:
-                                        crop_paths.append(str(crop_path))
-                            except Exception as e:
-                                print(f"\n[DetectPipeline] 크롭 실패 {img_item.path}: {e}")
-
-                        if crop_img:
-                            try:
-                                crop_img.close()
-                            except Exception:
-                                pass
-                annotated_path = None
-                if self.save_annotated and img_item.path and bboxes:
-                    image_stem = img_item.id or Path(img_item.path).stem
-                    annotated_file = f"{image_stem}.jpg"
-                    annotated_output = Path(self.annotated_dir) / annotated_file
-                    success = draw_bboxes(
-                        img_item.path,
-                        bboxes,
-                        annotated_output,
-                        color=self.annotated_box_color,
-                        width=self.annotated_line_width,
-                        font_size=self.annotated_font_size,
-                        show_confidence=self.annotated_show_confidence,
-                    )
-                    if success:
-                        annotated_path = str(annotated_output)
-
-                # 결과 항목 생성 (모든 이미지에 대해)
-                result_entry = {
-                    "image_id": img_item.id,
-                    "original_path": str(img_item.path) if img_item.path else None,
-                    "bboxes": [
-                        {
-                            "label": b.label,
-                            "confidence": b.confidence,
-                            "xyxy": b.xyxy,
-                            "labeler_confidence": labeler_confidences[i],
-                        } for i, b in enumerate(bboxes)
-                    ],
-                    "crop_paths": crop_paths,
-                    "annotated_path": annotated_path,
-                }
-                results.append(result_entry)
-
-            # 진행상황 출력
-            processed = min(batch_end, total)
-            detected_count = sum(1 for r in results if r["bboxes"])
-            print(f"[DetectPipeline] 처리됨 {processed}/{total} (검출됨: {detected_count})...", end="\r", flush=True)
+                # 프로그레스바 업데이트
+                detected_count = sum(1 for r in results if r["bboxes"])
+                pbar.set_postfix_str(f"검출: {detected_count}")
+                pbar.update(len(batch_items))
 
         print()
         # 결과 저장
