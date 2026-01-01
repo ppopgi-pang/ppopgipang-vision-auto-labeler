@@ -56,7 +56,7 @@ class DetectPipeline(PipelineStep):
                 self.force_fallback_label = True
 
     def _process_single_crop(self, img_path, bbox, crop_idx, img_id):
-        """단일 크롭을 처리: 생성 → 라벨링 → 저장"""
+        """단일 크롭을 처리: 생성 → 라벨링 → 저장 (스레드 안전)"""
         label = bbox.label
         crop_img = None
         labeler_confidence = None
@@ -66,21 +66,18 @@ class DetectPipeline(PipelineStep):
             # 1. 크롭 생성
             if self.force_fallback_label:
                 label = self.labeler_fallback_label
-                bbox.label = label
 
             if self.labeler or self.save_crops:
                 crop_img = crop_image_to_pil(img_path, bbox, padding=self.crop_padding)
 
-            # 2. VLM 라벨링
+            # 2. VLM 라벨링 (세마포어로 API 호출 제어)
             if self.labeler and crop_img:
                 with self.api_semaphore:
                     label, labeler_confidence = self.labeler.label_image(crop_img)
                     if self.labeler_rate_limit_delay > 0:
                         time.sleep(self.labeler_rate_limit_delay)
-                bbox.label = label
             elif crop_img is None and not self.force_fallback_label:
                 label = self.labeler_fallback_label
-                bbox.label = label
 
             # 3. 크롭 저장
             if self.save_crops:
@@ -109,7 +106,7 @@ class DetectPipeline(PipelineStep):
                 except Exception:
                     pass
 
-        return crop_path_str, labeler_confidence
+        return crop_path_str, labeler_confidence, label
 
     def run(self, images: list[ImageItem]) -> list[dict]:
         """
@@ -122,7 +119,7 @@ class DetectPipeline(PipelineStep):
         total = len(images)
         batch_size = self.config.get("batch_size", 16)  # YOLO 배치 크기 (8-16 권장)
 
-        # 배치 단위로 처리
+        # 배치 단위로 처리 (position=1: 전체 프로그레스바 아래, leave=False: 완료 후 제거)
         with tqdm(total=total, desc="객체 탐지", unit="img", position=1, leave=False) as pbar:
             for batch_start in range(0, total, batch_size):
                 batch_end = min(batch_start + batch_size, total)
@@ -182,10 +179,13 @@ class DetectPipeline(PipelineStep):
                             for future in as_completed(futures):
                                 crop_idx = futures[future]
                                 try:
-                                    crop_path_str, labeler_confidence = future.result()
+                                    crop_path_str, labeler_confidence, label = future.result()
                                     if crop_path_str:
                                         crop_paths.append(crop_path_str)
                                     labeler_confidences[crop_idx] = labeler_confidence
+                                    # 메인 스레드에서 bbox.label 업데이트 (스레드 안전)
+                                    if label:
+                                        bboxes[crop_idx].label = label
                                 except Exception as e:
                                     print(f"\n[DetectPipeline] 크롭 처리 오류: {e}")
 

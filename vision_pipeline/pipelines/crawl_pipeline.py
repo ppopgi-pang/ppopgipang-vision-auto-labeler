@@ -29,6 +29,7 @@ class CrawlPipeline(PipelineStep):
                 ("Naver", self.naver_crawler)
             ]
 
+            # 세부 프로그레스바 (position=1: 전체 프로그레스바 아래, leave=False: 완료 후 제거)
             with tqdm(total=len(crawlers), desc="크롤러", unit="개", position=1, leave=False) as pbar:
                 with ThreadPoolExecutor(max_workers=2) as executor:
                     futures = {

@@ -118,6 +118,7 @@ class VerifyPipeline(PipelineStep):
         async def run_async():
             num_batches = (len(verify_items) + batch_size - 1) // batch_size
 
+            # 세부 프로그레스바 (position=1: 전체 프로그레스바 아래, leave=False: 완료 후 제거)
             with tqdm(total=len(verify_items), desc="검증", unit="crop", position=1, leave=False) as pbar:
                 for batch_idx, batch_start in enumerate(range(0, len(verify_items), batch_size), start=1):
                     batch_end = min(batch_start + batch_size, len(verify_items))
@@ -198,6 +199,7 @@ class VerifyPipeline(PipelineStep):
 
     def _run_sync_fallback(self, verify_items: list[tuple[int, str, str, str]], results_by_index: list[LabelResult | None], total_crops: int) -> list[LabelResult]:
         """동기 처리 fallback (asyncio 실패 시)"""
+        # 세부 프로그레스바 (position=1: 전체 프로그레스바 아래, leave=False: 완료 후 제거)
         with tqdm(total=len(verify_items), desc="검증 (동기)", unit="crop", position=1, leave=False) as pbar:
             for idx, (result_index, crop_path, label, image_id) in enumerate(verify_items, start=1):
                 try:

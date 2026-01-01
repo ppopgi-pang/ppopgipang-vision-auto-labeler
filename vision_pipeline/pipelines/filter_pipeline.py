@@ -27,6 +27,7 @@ class FilterPipeline(PipelineStep):
     def run(self, images):
         print(f"--- FilterPipeline Start ({len(images)} images) ---")
 
+        # 세부 프로그레스바 (position=1: 전체 프로그레스바 아래, leave=False: 완료 후 제거)
         with tqdm(total=3, desc="필터링", unit="단계", position=1, leave=False) as pbar:
             # 1. 중복 제거
             pbar.set_description("1/3: 중복 제거")

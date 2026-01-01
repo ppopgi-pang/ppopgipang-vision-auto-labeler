@@ -47,7 +47,7 @@ class PipelineRunner:
         if self.stage_config.get("verify", True):
             stages.append(("검증", "verify"))
 
-        # 전체 파이프라인 프로그레스바
+        # 전체 파이프라인 프로그레스바 (position=0: 최상위, leave=True: 완료 후에도 유지)
         with tqdm(total=len(stages), desc="전체 파이프라인 진행", unit="단계", position=0, leave=True, bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]') as pbar:
             images = []
             filtered_images = []
