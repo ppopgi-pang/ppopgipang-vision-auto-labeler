@@ -2,6 +2,7 @@ import time
 import yaml
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Semaphore
 from tqdm import tqdm
 from pipelines.base import PipelineStep
 from modules.detector.yolo_world import YoloDetector
@@ -41,10 +42,13 @@ class DetectPipeline(PipelineStep):
         self.annotated_show_confidence = bool(self.config.get("annotated_show_confidence", True))
         self.labeler = None
         self.labeler_rate_limit_delay = 0.0
+        self.api_semaphore = None
         self.force_fallback_label = False
         if self.use_vlm_labeler:
             labeler_config = self.config.get("labeler", {})
             self.labeler_rate_limit_delay = float(labeler_config.get("rate_limit_delay", 0.0))
+            api_max_concurrent = int(labeler_config.get("api_max_concurrent", 1))
+            self.api_semaphore = Semaphore(api_max_concurrent)
             self.labeler = VLMLabeler(labeler_config)
             if not self.labeler.is_available():
                 print("[DetectPipeline] VLM 라벨러를 사용할 수 없습니다. 기본 라벨을 사용합니다.")
@@ -69,7 +73,10 @@ class DetectPipeline(PipelineStep):
 
             # 2. VLM 라벨링
             if self.labeler and crop_img:
-                label, labeler_confidence = self.labeler.label_image(crop_img)
+                with self.api_semaphore:
+                    label, labeler_confidence = self.labeler.label_image(crop_img)
+                    if self.labeler_rate_limit_delay > 0:
+                        time.sleep(self.labeler_rate_limit_delay)
                 bbox.label = label
             elif crop_img is None and not self.force_fallback_label:
                 label = self.labeler_fallback_label
@@ -216,11 +223,6 @@ class DetectPipeline(PipelineStep):
                         "annotated_path": annotated_path,
                     }
                     results.append(result_entry)
-
-                # 배치 처리 후 rate limit delay 적용 (배치 내 모든 crops에 대해)
-                if self.labeler_rate_limit_delay > 0 and total_crops_in_batch > 0:
-                    batch_delay = self.labeler_rate_limit_delay * total_crops_in_batch
-                    time.sleep(batch_delay)
 
                 # 프로그레스바 업데이트
                 detected_count = sum(1 for r in results if r["bboxes"])
