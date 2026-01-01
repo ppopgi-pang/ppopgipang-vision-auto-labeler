@@ -11,10 +11,10 @@ from openai import OpenAI
 from dotenv import load_dotenv
 
 DEFAULT_SYSTEM_PROMPT = (
-    "You are an expert image labeler. "
-    "Return a concise, specific class label for the main object in the image. "
-    "Use 1-3 words in lowercase or snake_case. "
-    "If the image is unclear, return 'unknown'."
+    "You are a final character selection judge. "
+    "Choose exactly one label from the provided candidates. "
+    "If uncertain, choose unknown. "
+    "Return only valid JSON with a single key: label."
 )
 
 class VLMLabeler:
@@ -62,9 +62,11 @@ class VLMLabeler:
             return max(delay_ms / 1000.0, 0.001)
         return self.rate_limit_retry_default_delay
 
-    def label_image(self, image: Image.Image) -> Tuple[str, Optional[float]]:
-        """이미지를 VLM으로 라벨링하여 라벨과 신뢰도 반환"""
+    def label_image(self, image: Image.Image, candidates: Optional[list[str]] = None) -> Tuple[str, Optional[float]]:
+        """이미지를 VLM으로 라벨링하여 라벨을 반환"""
         if not self.client:
+            return self.default_label, 0.0
+        if not candidates:
             return self.default_label, 0.0
 
         try:
@@ -72,6 +74,18 @@ class VLMLabeler:
         except Exception as e:
             print(f"[VLMLabeler] 이미지 인코딩 오류: {e}")
             return self.default_label, 0.0
+
+        candidate_list = [str(c).strip() for c in candidates if str(c).strip()]
+        if self.default_label not in candidate_list:
+            candidate_list.append(self.default_label)
+        if not candidate_list:
+            return self.default_label, 0.0
+
+        payload = {
+            "task": "final_character_selection",
+            "rules": {"choose_one": True, "fallback": self.default_label},
+            "candidates": candidate_list,
+        }
 
         retries_left = max(self.rate_limit_max_retries, 0)
         while True:
@@ -86,9 +100,7 @@ class VLMLabeler:
                                 {
                                     "type": "text",
                                     "text": (
-                                        "Return ONLY valid JSON with this schema:\n"
-                                        '{ "label": string, "confidence": number }\n'
-                                        "The label must be a concise class name."
+                                        json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
                                     ),
                                 },
                                 {
@@ -106,9 +118,10 @@ class VLMLabeler:
                 content = response.choices[0].message.content
                 result_json = json.loads(content)
 
-                label = result_json.get("label") or self.default_label
-                confidence = result_json.get("confidence", None)
-                return str(label).strip(), confidence
+                label = str(result_json.get("label") or self.default_label).strip()
+                if label not in candidate_list:
+                    label = self.default_label
+                return label, None
             except Exception as e:
                 retry_delay = self._get_rate_limit_delay(e)
                 if retry_delay is not None and retries_left > 0:

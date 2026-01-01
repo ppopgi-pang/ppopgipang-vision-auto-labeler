@@ -9,6 +9,7 @@ from modules.detector.yolo_world import YoloDetector
 from modules.detector.bbox_utils import crop_image, crop_image_to_pil, draw_bboxes
 from modules.storage.metadata_store import MetadataStore
 from modules.llm.labeler import VLMLabeler
+from modules.clip.candidate_generator import CLIPCandidateGenerator
 from domain.image import ImageItem
 
 class DetectPipeline(PipelineStep):
@@ -44,6 +45,9 @@ class DetectPipeline(PipelineStep):
         self.labeler_rate_limit_delay = 0.0
         self.api_semaphore = None
         self.force_fallback_label = False
+        self.clip_candidate_generator = None
+        self.clip_top1_threshold = None
+        self.clip_semaphore = None
         if self.use_vlm_labeler:
             labeler_config = self.config.get("labeler", {})
             self.labeler_rate_limit_delay = float(labeler_config.get("rate_limit_delay", 0.0))
@@ -55,12 +59,24 @@ class DetectPipeline(PipelineStep):
                 self.labeler = None
                 self.force_fallback_label = True
 
+        clip_config = self.config.get("clip_candidate", {})
+        if bool(clip_config.get("enabled", False)):
+            self.clip_top1_threshold = float(clip_config.get("top1_threshold", 0.55))
+            clip_max_concurrent = int(clip_config.get("max_concurrent", 1))
+            self.clip_semaphore = Semaphore(max(1, clip_max_concurrent))
+            self.clip_candidate_generator = CLIPCandidateGenerator(clip_config)
+            if not self.clip_candidate_generator.is_available():
+                print("[DetectPipeline] CLIP 후보 생성기를 사용할 수 없습니다. VLM 라벨링을 건너뜁니다.")
+                self.clip_candidate_generator = None
+
     def _process_single_crop(self, img_path, bbox, crop_idx, img_id):
         """단일 크롭을 처리: 생성 → 라벨링 → 저장 (스레드 안전)"""
         label = bbox.label
         crop_img = None
         labeler_confidence = None
         crop_path_str = None
+        clip_candidates = None
+        clip_top1_score = None
 
         try:
             # 1. 크롭 생성
@@ -70,16 +86,29 @@ class DetectPipeline(PipelineStep):
             if self.labeler or self.save_crops:
                 crop_img = crop_image_to_pil(img_path, bbox, padding=self.crop_padding)
 
-            # 2. VLM 라벨링 (세마포어로 API 호출 제어)
-            if self.labeler and crop_img:
-                with self.api_semaphore:
-                    label, labeler_confidence = self.labeler.label_image(crop_img)
-                    if self.labeler_rate_limit_delay > 0:
-                        time.sleep(self.labeler_rate_limit_delay)
+            # 2. CLIP 후보 생성
+            if self.clip_candidate_generator and crop_img and not self.force_fallback_label:
+                with self.clip_semaphore:
+                    clip_candidates, clip_top1_score = self.clip_candidate_generator.get_candidates(crop_img)
+
+            # 3. VLM 라벨링 (CLIP 후보 기반, 세마포어로 API 호출 제어)
+            if self.labeler and crop_img and clip_candidates:
+                candidate_labels = [c["label"] for c in clip_candidates if c.get("label")]
+                if not candidate_labels:
+                    label = self.labeler_fallback_label
+                elif clip_top1_score is not None and self.clip_top1_threshold is not None and clip_top1_score < self.clip_top1_threshold:
+                    label = self.labeler_fallback_label
+                else:
+                    with self.api_semaphore:
+                        label, labeler_confidence = self.labeler.label_image(crop_img, candidate_labels)
+                        if self.labeler_rate_limit_delay > 0:
+                            time.sleep(self.labeler_rate_limit_delay)
             elif crop_img is None and not self.force_fallback_label:
                 label = self.labeler_fallback_label
+            elif not self.force_fallback_label and self.labeler and crop_img and not clip_candidates:
+                label = self.labeler_fallback_label
 
-            # 3. 크롭 저장
+            # 4. 크롭 저장
             if self.save_crops:
                 label_clean = "".join(c for c in label if c.isalnum() or c in (" ", "_", "-")).strip()
                 if not label_clean:
@@ -108,7 +137,7 @@ class DetectPipeline(PipelineStep):
                 except Exception:
                     pass
 
-        return crop_path_str, labeler_confidence, label
+        return crop_path_str, labeler_confidence, label, clip_candidates, clip_top1_score
 
     def run(self, images: list[ImageItem]) -> list[dict]:
         """
@@ -162,6 +191,8 @@ class DetectPipeline(PipelineStep):
                     bboxes = bbox_map.get(idx, [])
                     crop_paths = []
                     labeler_confidences = [None] * len(bboxes)
+                    clip_candidates_list = [None] * len(bboxes)
+                    clip_top1_scores = [None] * len(bboxes)
 
                     if bboxes and img_item.path and (self.save_crops or self.labeler or self.force_fallback_label):
                         # 병렬 처리: 모든 crops를 ThreadPoolExecutor로 처리
@@ -181,10 +212,12 @@ class DetectPipeline(PipelineStep):
                             for future in as_completed(futures):
                                 crop_idx = futures[future]
                                 try:
-                                    crop_path_str, labeler_confidence, label = future.result()
+                                    crop_path_str, labeler_confidence, label, clip_candidates, clip_top1_score = future.result()
                                     if crop_path_str:
                                         crop_paths.append(crop_path_str)
                                     labeler_confidences[crop_idx] = labeler_confidence
+                                    clip_candidates_list[crop_idx] = clip_candidates
+                                    clip_top1_scores[crop_idx] = clip_top1_score
                                     # 메인 스레드에서 bbox.label 업데이트 (스레드 안전)
                                     if label:
                                         bboxes[crop_idx].label = label
@@ -219,6 +252,8 @@ class DetectPipeline(PipelineStep):
                                 "confidence": b.confidence,
                                 "xyxy": b.xyxy,
                                 "labeler_confidence": labeler_confidences[i],
+                                "clip_candidates": clip_candidates_list[i],
+                                "clip_top1_score": clip_top1_scores[i],
                             } for i, b in enumerate(bboxes)
                         ],
                         "crop_paths": crop_paths,

@@ -18,88 +18,30 @@ use_vlm_labeler: true
 labeler_fallback_label: "unknown"
 labeler:
   model: "gpt-4o"
-  max_tokens: 2000
+  max_tokens: 100
   temperature: 0.0
-  rate_limit_delay: 0.5  # Delay between labeler calls (seconds)
+  rate_limit_delay: 0.0  # Delay between labeler calls (seconds)
   rate_limit_max_retries: 2  # Retries on rate limit (429)
   rate_limit_retry_default_delay: 1.0  # Fallback delay if no retry hint (seconds)
   default_label: "unknown"
-  api_max_concurrent: 1
+  api_max_concurrent: 2
   system_prompt: |
-    You are a vision classifier specialized in character labeling.
-    Given an image of a character, identify the character shown in the image.
-    Return a single class label representing the main character, following ALL rules below:
-    - Use 1~3 words
-    - Use lowercase or snake_case
-    - Be specific (e.g., character name or clear character type)
-    - You MUST choose exactly ONE label from the predefined list below
-    - Do NOT invent new labels, synonyms, or variants
-    - If the image is unclear, ambiguous, or the character cannot be confidently identified
-      from the list below, return exactly:
-      unknown
-    Predefined label list (choose ONLY from this list):
-    [Mickey Mouse, Minnie Mouse, Donald Duck, Daisy Duck, Goofy, Pluto, Chip, Dale,
-    Elsa, Anna, Olaf, Rapunzel, Moana, Stitch,
-    Pooh, Winnie the Pooh, Piglet, Tigger, Eeyore,
-    Simba, Nala, Pumbaa, Timon,
-    Buzz, Woody, Jessie, Rex, Forky, Hamm, Alien,
-    Mike, Sulley, Wall-E, Eve,
-    Nemo, Dory, Remy, Baymax,
-    Wreck-It Ralph, Vanellope,
-    Judy Hopps, Nick Wilde,
-    Aladdin, Jasmine, Genie,
-    Cinderella, Snow White, Aurora, Ariel, Flounder, Sebastian,
-    Belle, Beast, Mulan, Mushu, Tiana, Merida,
-    Dumbo, Bambi, Pinocchio, Alice, Cheshire Cat,
-    Mirabel, Bruno, Luisa, Isabela,
-    Luca, Alberto, Asha,
-    Hello Kitty, My Melody, Kuromi, Cinnamoroll, Pompompurin, Pochacco, Keroppi,
-    Badtz-Maru, Hangyodon, Little Twin Stars, Kiki, Lala, Marron Cream, Usahana,
-    Gudetama, My Sweet Piano,
-    Totoro, Medium Totoro, Small Totoro, Catbus, Jiji, Jiji the Black Cat,
-    No-Face, Haku, Chihiro, Yubaba,
-    Ponyo, Sosuke, Howl, Sophie, Calcifer,
-    San, Ashitaka, Yakul, Kodama,
-    Nausicaa, Teto, Mei, Satsuki, Arrietty, Baron, Muta,
-    Pikachu, Eevee, Charmander, Charizard, Squirtle, Blastoise, Bulbasaur,
-    Snorlax, Mew, Mewtwo, Dragonite, Jigglypuff, Pichu,
-    Lucario, Lugia, Ho-Oh, Growlithe, Arcanine, Magikarp, Gyarados,
-    Emolga, Psyduck, Sylveon, Umbreon, Glaceon, Leafeon, Flareon,
-    Vaporeon, Jolteon, Ditto, Raichu,
-    Shin-chan, Shiro, Kazama, Nene, Masao, Bo, Himawari, Misae, Hiroshi, Ai,
-    Action Mask,
-    Bonobono, Raccoon, Porori, Chipmunk, Araiguma,
-    Chiikawa, Hachiware, Usagi, Momonga, Kurimanju,
-    Pat, Mat, Pat and Mat,
-    Toothless, Light Fury, Hiccup, Astrid, Night Fury, Stormfly,
-    Luffy, Zoro, Nami, Usopp, Sanji, Chopper, Robin, Franky, Brook, Jinbe,
-    Law, Ace, Shanks, Sabo, Hancock, Yamato, Bepo,
-    Pororo, Eddy, Poby, Crong, Petty, Harry, Rody, Tongtong, Nyao,
-    Mashimaro,
-    Miffy, Melanie, Boris, Snuffy,
-    Joking Bear,
-    Pingu, Pinga,
-    SpongeBob, Patrick, Squidward, Mr. Krabs, Sandy, Gary,
-    Moomin, Snorkmaiden, Little My, Snufkin,
-    Brown, Cony, Sally, Ryan, Apeach, Muzi, Con, Neo, Frodo, Tube, Chunsik,
-    Peppa Pig, George,
-    Mario, Luigi, Princess Peach, Toad, Yoshi, Bowser,
-    Kirby, Meta Knight, Waddle Dee,
-    Finn, Jake, BMO, Marceline,
-    Snoopy, Charlie Brown, Woodstock,
-    Doraemon, Nobita, Dorami,
-    Anpanman, Baikinman, Shokupanman,
-    Thomas, Percy,
-    Molang, Piu Piu, Bbang Bbang,
-    Esther Bunny, Zanmang Loopy,
-    Teletubbies, Po, Tinky Winky,
-    Tayo, Rogi, Lani, Gani,
-    Poli, Roy, Amber, Helly,
-    Cocomong, Heartsping, TinyPing, Azaping,
-    Jett, Super Wings,
-    Bob, Kevin, Stuart, Minions,
-    Goku, Vegeta,
-    Tanjiro, Nezuko, Zenitsu, Inosuke, Rengoku,
-    Naruto, Sasuke, Kakashi, Kurama,
-    Tata, Chimmy, Cooky, Mang, Koya,
-    BT21]
+    You are a final character selection judge.
+    You will receive a JSON task and an image.
+    Choose exactly one label from the candidates in the JSON.
+    If uncertain, choose "unknown".
+    Respond with JSON only: {"label":"<candidate>"}
+
+clip_candidate:
+  enabled: true
+  model_name: "openai/clip-vit-base-patch32"
+  device: "auto"
+  top_k: 5
+  top1_threshold: 0.55
+  prompt_templates:
+    - "a plush toy of {character_name}"
+    - "a stuffed doll representing {character_name}"
+  labels_path: "configs/character_labels.yaml"
+  cache_path: "data/artifacts/clip_text_embeddings.pt"
+  text_batch_size: 64
+  max_concurrent: 1
