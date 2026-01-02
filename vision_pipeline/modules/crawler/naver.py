@@ -6,80 +6,111 @@ from config import settings
 from playwright.sync_api import sync_playwright
 from modules.crawler.utils import run_sync_in_thread_if_event_loop
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class NaverCrawler(Crawler):
     def fetch(self, keywords: List[str]) -> List[ImageItem]:
         return run_sync_in_thread_if_event_loop(self._fetch_sync, keywords)
 
-    def _fetch_sync(self, keywords: List[str]) -> List[ImageItem]:
-        print(f"[NaverCrawler] {keywords}에 대해 검색 중...")
-        
+    def _fetch_single_keyword_with_retry(self, keyword: str, max_retries: int = 3) -> List[ImageItem]:
+        """재시도 로직이 있는 키워드 크롤링"""
+        for attempt in range(max_retries):
+            try:
+                return self._fetch_single_keyword(keyword)
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt  # 1초, 2초, 4초
+                    print(f"[NaverCrawler-{keyword}] 시도 {attempt + 1}/{max_retries} 실패: {e}")
+                    print(f"[NaverCrawler-{keyword}] {wait_time}초 후 재시도...")
+                    time.sleep(wait_time)
+                else:
+                    print(f"[NaverCrawler-{keyword}] 모든 재시도 실패: {e}")
+                    return []
+        return []
+
+    def _fetch_single_keyword(self, keyword: str) -> List[ImageItem]:
+        """단일 키워드에 대한 크롤링 수행"""
         image_items = []
-        
+
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
-            
-            for keyword in keywords:
-                try:
-                    # 네이버 이미지 검색으로 이동
-                    page.goto(f"https://search.naver.com/search.naver?where=image&sm=tab_jum&query={keyword}")
 
-                    page.wait_for_load_state("networkidle")
-                    page.wait_for_timeout(2000)
+            try:
+                # 네이버 이미지 검색으로 이동
+                page.goto(f"https://search.naver.com/search.naver?where=image&sm=tab_jum&query={keyword}")
 
-                    # 더 많은 이미지를 로드하기 위해 스크롤
-                    last_height = page.evaluate("document.body.scrollHeight")
-                    scroll_attempts = 0
-                    max_scrolls = 100
+                page.wait_for_load_state("networkidle")
+                page.wait_for_timeout(2000)
 
-                    while scroll_attempts < max_scrolls:
-                        page.keyboard.press("End")
+                # 더 많은 이미지를 로드하기 위해 스크롤
+                last_height = page.evaluate("document.body.scrollHeight")
+                scroll_attempts = 0
+                max_scrolls = 100
+
+                while scroll_attempts < max_scrolls:
+                    page.keyboard.press("End")
+                    page.wait_for_timeout(1000)
+
+                    new_height = page.evaluate("document.body.scrollHeight")
+                    if new_height == last_height:
                         page.wait_for_timeout(1000)
-
                         new_height = page.evaluate("document.body.scrollHeight")
                         if new_height == last_height:
-                            # 조금 더 대기
-                            page.wait_for_timeout(1000)
-                            new_height = page.evaluate("document.body.scrollHeight")
-                            if new_height == last_height:
-                                print("[NaverCrawler] 페이지 끝에 도달했습니다.")
-                                break
+                            print(f"[NaverCrawler-{keyword}] 페이지 끝에 도달")
+                            break
 
-                        last_height = new_height
-                        scroll_attempts += 1
+                    last_height = new_height
+                    scroll_attempts += 1
 
-                    # 네이버 이미지 선택자는 보통 ._image 또는 ._img를 포함
-                    # .tile_item img 확인
+                # 이미지 URL 추출
+                image_elements = page.locator(".tile_item img").all()
+                print(f"[NaverCrawler-{keyword}] {len(image_elements)}개의 이미지 요소 발견")
 
-                    # 업데이트된 선택자: .tile_item이 컨테이너이고 img가 자식. ._image 클래스는 제거됨.
-                    image_elements = page.locator(".tile_item img").all()
-                    print(f"DEBUG: {len(image_elements)}개의 이미지 요소 발견.")
+                count = 0
+                for element in image_elements:
+                    try:
+                       src = element.get_attribute("src")
+                       if not src or "data:image" in src:
+                           src = element.get_attribute("data-src")
 
-                    count = 0
-                    for element in image_elements:
-                        # 사용 가능한 모든 이미지를 가져오기 위해 제한 제거
-                        # if count >= 10: break
+                       if src and src.startswith("http"):
+                            image_items.append(ImageItem(
+                                url=src,
+                                keyword=keyword,
+                                source="naver"
+                            ))
+                            count += 1
+                    except Exception as e:
+                        print(f"[NaverCrawler-{keyword}] 이미지 처리 오류: {e}")
 
-                        try:
-                           src = element.get_attribute("src")
-                           # 네이버는 때때로 실제 src를 data-src에 넣음 (lazy load) 하지만 스크롤 후에는 src에 있어야 함
-                           if not src or "data:image" in src:
-                               src = element.get_attribute("data-src")
+                print(f"[NaverCrawler-{keyword}] 완료: {len(image_items)}개 이미지 수집")
 
-                           if src and src.startswith("http"):
-                                image_items.append(ImageItem(
-                                    url=src,
-                                    keyword=keyword,
-                                    source="naver"
-                                ))
-                                count += 1
-                        except Exception as e:
-                            print(f"이미지 처리 오류: {e}")
+            except Exception as e:
+                print(f"[NaverCrawler-{keyword}] 크롤링 오류: {e}")
+            finally:
+                browser.close()
 
-                except Exception as e:
-                    print(f"키워드 {keyword} 크롤링 오류: {e}")
+        return image_items
 
-            browser.close()
-            
+    def _fetch_sync(self, keywords: List[str]) -> List[ImageItem]:
+        print(f"[NaverCrawler] {len(keywords)}개 키워드에 대해 병렬 검색 시작...")
+
+        image_items = []
+
+        # 키워드를 병렬로 처리 (코랩 T4 환경에서 10개 동시 실행 가능)
+        max_workers = min(len(keywords), 10)
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(self._fetch_single_keyword_with_retry, keyword): keyword
+                for keyword in keywords
+            }
+
+            for future in as_completed(futures):
+                keyword = futures[future]
+                result = future.result()  # 재시도 로직 내부에서 이미 예외 처리됨
+                image_items.extend(result)
+
+        print(f"[NaverCrawler] 총 {len(image_items)}개 이미지 수집 완료")
         return image_items

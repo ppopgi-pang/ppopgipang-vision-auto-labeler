@@ -1,8 +1,8 @@
 model: "gpt-4o-mini"
 max_tokens: 300
 temperature: 0.0
-batch_size: 1  # Concurrent API requests (OpenAI rate limit safe)
-rate_limit_delay: 1.0  # Delay between batches (seconds)
+batch_size: 50  # OpenAI Tier 2 적극 활용: 20 → 50 (비동기 배치 처리)
+rate_limit_delay: 0.2  # Delay between batches (seconds), 0.5 → 0.2로 단축
 labeler_confidence_threshold: 0.7  # Verify only when labeler confidence is below this threshold (null to always verify)
 
 system_prompt: |

@@ -24,7 +24,7 @@ labeler:
   rate_limit_max_retries: 2  # Retries on rate limit (429)
   rate_limit_retry_default_delay: 1.0  # Fallback delay if no retry hint (seconds)
   default_label: "unknown"
-  api_max_concurrent: 2
+  api_max_concurrent: 30  # OpenAI Tier 2 적극 활용: 10 → 30
   system_prompt: |
     You are a final character selection judge.
     You will receive a JSON task and an image.
@@ -44,7 +44,7 @@ clip_candidate:
   labels_path: "configs/character_labels.yaml"
   cache_path: "data/artifacts/clip_text_embeddings.pt"
   text_batch_size: 64
-  max_concurrent: 1
+  max_concurrent: 4  # GPU 병렬 처리 최적화: 1 → 4
 
 # Verifier (optional verification after labeling)
 verifier:
@@ -53,7 +53,7 @@ verifier:
   max_tokens: 150
   temperature: 0.0
   labeler_confidence_threshold: 0.7  # Skip verification if labeler confidence >= threshold
-  api_max_concurrent: 2
+  api_max_concurrent: 30  # OpenAI Tier 2 적극 활용: 10 → 30
   system_prompt: |
     You are an expert image verifier.
     You will be given an image and a question: "Is this a {label}?"
