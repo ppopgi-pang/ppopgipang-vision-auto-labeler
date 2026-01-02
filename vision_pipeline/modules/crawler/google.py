@@ -5,103 +5,119 @@ from domain.image import ImageItem
 from config import settings
 from playwright.sync_api import sync_playwright
 from modules.crawler.utils import run_sync_in_thread_if_event_loop
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class GoogleCrawler(Crawler):
     def fetch(self, keywords: List[str]) -> List[ImageItem]:
         return run_sync_in_thread_if_event_loop(self._fetch_sync, keywords)
 
-    def _fetch_sync(self, keywords: List[str]) -> List[ImageItem]:
-        print(f"[GoogleCrawler] {keywords}에 대해 검색 중...")
-
+    def _fetch_single_keyword(self, keyword: str) -> List[ImageItem]:
+        """단일 키워드에 대한 크롤링 수행"""
         image_items = []
 
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)  # 프로덕션 환경에서는 True로 설정
+            browser = p.chromium.launch(headless=True)
             page = browser.new_page()
 
-            for keyword in keywords:
-                try:
-                    # Google 이미지 검색으로 이동
-                    page.goto("https://www.google.com/imghp?hl=en&ogbl")
+            try:
+                # Google 이미지 검색으로 이동
+                page.goto("https://www.google.com/imghp?hl=en&ogbl")
 
-                    # 쿠키 동의 버튼이 있으면 클릭 (EU 지역용이지만 일반적인 좋은 관행)
+                # 쿠키 동의 버튼이 있으면 클릭
+                try:
+                    page.locator("button:has-text('Accept all')").click(timeout=2000)
+                except:
+                    pass
+
+                # 검색
+                search_box = page.locator("textarea[name='q']")
+                search_box.fill(keyword)
+                search_box.press("Enter")
+
+                page.wait_for_load_state("networkidle")
+                page.wait_for_timeout(2000)
+
+                # 더 많은 이미지를 로드하기 위해 스크롤
+                last_height = page.evaluate("document.body.scrollHeight")
+                scroll_attempts = 0
+                max_scrolls = 100
+
+                while scroll_attempts < max_scrolls:
+                    page.keyboard.press("End")
+                    page.wait_for_timeout(1000)
+
+                    # "더 보기" 버튼을 확인하고 표시되면 클릭
                     try:
-                        page.locator("button:has-text('Accept all')").click(timeout=2000)
-                    except:
+                        more_button = page.locator(".mye4qd, input[value='Show more results'], input[type='button'][value='Show more results']")
+                        if more_button.is_visible():
+                            print(f"[GoogleCrawler-{keyword}] '더 보기' 버튼 클릭 중...")
+                            more_button.click()
+                            page.wait_for_timeout(2000)
+                    except Exception:
                         pass
 
-                    # 검색
-                    search_box = page.locator("textarea[name='q']")
-                    search_box.fill(keyword)
-                    search_box.press("Enter")
-
-                    page.wait_for_load_state("networkidle")
-                    page.wait_for_timeout(2000)  # 결과 로딩을 위한 명시적 대기
-
-                    # 더 많은 이미지를 로드하기 위해 스크롤
-                    last_height = page.evaluate("document.body.scrollHeight")
-                    scroll_attempts = 0
-                    max_scrolls = 100  # 안전 제한
-
-                    while scroll_attempts < max_scrolls:
-                        page.keyboard.press("End")
+                    new_height = page.evaluate("document.body.scrollHeight")
+                    if new_height == last_height:
                         page.wait_for_timeout(1000)
-
-                        # "더 보기" 버튼을 확인하고 표시되면 클릭
-                        # 버튼의 일반적인 선택자: .mye4qd
-                        try:
-                            # 여러 가능한 선택자 또는 텍스트 시도
-                            more_button = page.locator(".mye4qd, input[value='Show more results'], input[type='button'][value='Show more results']")
-                            if more_button.is_visible():
-                                print("[GoogleCrawler] '더 보기' 버튼 클릭 중...")
-                                more_button.click()
-                                page.wait_for_timeout(2000)
-                        except Exception:
-                            pass
-
                         new_height = page.evaluate("document.body.scrollHeight")
                         if new_height == last_height:
-                            # 느린 네트워크인지 확인하기 위해 조금 더 대기
-                            page.wait_for_timeout(1000)
-                            new_height = page.evaluate("document.body.scrollHeight")
-                            if new_height == last_height:
-                                print("[GoogleCrawler] 페이지 끝에 도달했거나 새 콘텐츠가 없습니다.")
-                                break
+                            print(f"[GoogleCrawler-{keyword}] 페이지 끝에 도달")
+                            break
 
-                        last_height = new_height
-                        scroll_attempts += 1
+                    last_height = new_height
+                    scroll_attempts += 1
 
-                    # 이미지 URL 추출
-                    # Google 구조: div.isv-r이 결과를 포함. 내부에 img 태그.
-                    # img.rg_i는 썸네일의 일반적인 클래스.
+                # 이미지 URL 추출
+                image_elements = page.locator("img.YQ4gaf").all()
+                print(f"[GoogleCrawler-{keyword}] {len(image_elements)}개의 이미지 요소 발견")
 
-                    # 브라우저 검사에 기반한 업데이트된 선택자 (2024-05)
-                    image_elements = page.locator("img.YQ4gaf").all()
-                    print(f"DEBUG: {len(image_elements)}개의 'img.YQ4gaf' 요소 발견.")
+                count = 0
+                for element in image_elements:
+                    try:
+                       src = element.get_attribute("src")
+                       if not src:
+                           src = element.get_attribute("data-src")
 
-                    count = 0
-                    for element in image_elements:
-                        # 사용 가능한 모든 이미지를 가져오기 위해 제한 제거
-                        # if count >= 10: break
+                       if src and src.startswith("http"):
+                            image_items.append(ImageItem(
+                                url=src,
+                                keyword=keyword,
+                                source="google"
+                            ))
+                            count += 1
+                    except Exception as e:
+                        print(f"[GoogleCrawler-{keyword}] 이미지 처리 오류: {e}")
 
-                        try:
-                           src = element.get_attribute("src")
-                           if not src:
-                               src = element.get_attribute("data-src")
+                print(f"[GoogleCrawler-{keyword}] 완료: {len(image_items)}개 이미지 수집")
 
-                           if src and src.startswith("http"):
-                                image_items.append(ImageItem(
-                                    url=src,
-                                    keyword=keyword,
-                                    source="google"
-                                ))
-                                count += 1
-                        except Exception as e:
-                            print(f"이미지 처리 오류: {e}")
+            except Exception as e:
+                print(f"[GoogleCrawler-{keyword}] 크롤링 오류: {e}")
+            finally:
+                browser.close()
 
+        return image_items
+
+    def _fetch_sync(self, keywords: List[str]) -> List[ImageItem]:
+        print(f"[GoogleCrawler] {len(keywords)}개 키워드에 대해 병렬 검색 시작...")
+
+        image_items = []
+
+        # 키워드를 병렬로 처리
+        max_workers = min(len(keywords), 5)  # 최대 5개 동시 실행
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(self._fetch_single_keyword, keyword): keyword
+                for keyword in keywords
+            }
+
+            for future in as_completed(futures):
+                keyword = futures[future]
+                try:
+                    result = future.result()
+                    image_items.extend(result)
                 except Exception as e:
-                    print(f"키워드 {keyword} 크롤링 오류: {e}")
+                    print(f"[GoogleCrawler-{keyword}] 처리 실패: {e}")
 
-            browser.close()
-            
+        print(f"[GoogleCrawler] 총 {len(image_items)}개 이미지 수집 완료")
         return image_items
