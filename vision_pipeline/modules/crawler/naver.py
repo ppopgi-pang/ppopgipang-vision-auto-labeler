@@ -12,6 +12,22 @@ class NaverCrawler(Crawler):
     def fetch(self, keywords: List[str]) -> List[ImageItem]:
         return run_sync_in_thread_if_event_loop(self._fetch_sync, keywords)
 
+    def _fetch_single_keyword_with_retry(self, keyword: str, max_retries: int = 3) -> List[ImageItem]:
+        """재시도 로직이 있는 키워드 크롤링"""
+        for attempt in range(max_retries):
+            try:
+                return self._fetch_single_keyword(keyword)
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt  # 1초, 2초, 4초
+                    print(f"[NaverCrawler-{keyword}] 시도 {attempt + 1}/{max_retries} 실패: {e}")
+                    print(f"[NaverCrawler-{keyword}] {wait_time}초 후 재시도...")
+                    time.sleep(wait_time)
+                else:
+                    print(f"[NaverCrawler-{keyword}] 모든 재시도 실패: {e}")
+                    return []
+        return []
+
     def _fetch_single_keyword(self, keyword: str) -> List[ImageItem]:
         """단일 키워드에 대한 크롤링 수행"""
         image_items = []
@@ -82,22 +98,19 @@ class NaverCrawler(Crawler):
 
         image_items = []
 
-        # 키워드를 병렬로 처리
-        max_workers = min(len(keywords), 5)  # 최대 5개 동시 실행
+        # 키워드를 병렬로 처리 (코랩 T4 환경에서 10개 동시 실행 가능)
+        max_workers = min(len(keywords), 10)
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {
-                executor.submit(self._fetch_single_keyword, keyword): keyword
+                executor.submit(self._fetch_single_keyword_with_retry, keyword): keyword
                 for keyword in keywords
             }
 
             for future in as_completed(futures):
                 keyword = futures[future]
-                try:
-                    result = future.result()
-                    image_items.extend(result)
-                except Exception as e:
-                    print(f"[NaverCrawler-{keyword}] 처리 실패: {e}")
+                result = future.result()  # 재시도 로직 내부에서 이미 예외 처리됨
+                image_items.extend(result)
 
         print(f"[NaverCrawler] 총 {len(image_items)}개 이미지 수집 완료")
         return image_items
