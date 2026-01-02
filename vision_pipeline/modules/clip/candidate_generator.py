@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from threading import Lock
 from typing import Optional
 
 import torch
@@ -34,7 +33,6 @@ class CLIPCandidateGenerator:
         self.cache_path = config.get("cache_path", "data/artifacts/clip_text_embeddings.pt")
         self.label_entries = self._load_label_entries(config)
         self.labels = [entry["label"] for entry in self.label_entries]
-        self._lock = Lock()
         self._available = False
 
         if not self.enabled:
@@ -262,13 +260,12 @@ class CLIPCandidateGenerator:
         if top_k <= 0:
             return [], None
 
-        with self._lock:
-            inputs = self.processor(images=image, return_tensors="pt")
-            inputs = {k: v.to(self.device) for k, v in inputs.items()}
-            with torch.inference_mode():
-                image_features = self.model.get_image_features(**inputs)
-            image_features = F.normalize(image_features, p=2, dim=-1)
-            similarities = image_features @ self.text_embeddings.T
+        inputs = self.processor(images=image, return_tensors="pt")
+        inputs = {k: v.to(self.device) for k, v in inputs.items()}
+        with torch.inference_mode():
+            image_features = self.model.get_image_features(**inputs)
+        image_features = F.normalize(image_features, p=2, dim=-1)
+        similarities = image_features @ self.text_embeddings.T
 
         similarities = similarities.squeeze(0)
         k = min(top_k, similarities.shape[0])
