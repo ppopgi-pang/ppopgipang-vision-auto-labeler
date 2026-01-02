@@ -1,297 +1,682 @@
 labels:
-  - Mickey Mouse
-  - Minnie Mouse
-  - Donald Duck
-  - Daisy Duck
-  - Goofy
-  - Pluto
-  - Chip
-  - Dale
-  - Elsa
-  - Anna
-  - Olaf
-  - Rapunzel
-  - Moana
-  - Stitch
-  - Pooh
-  - Winnie the Pooh
-  - Piglet
-  - Tigger
-  - Eeyore
-  - Simba
-  - Nala
-  - Pumbaa
-  - Timon
-  - Buzz
-  - Woody
-  - Jessie
-  - Rex
-  - Forky
-  - Hamm
-  - Alien
-  - Mike
-  - Sulley
-  - Wall-E
-  - Eve
-  - Nemo
-  - Dory
-  - Remy
-  - Baymax
-  - Wreck-It Ralph
-  - Vanellope
-  - Judy Hopps
-  - Nick Wilde
-  - Aladdin
-  - Jasmine
-  - Genie
-  - Cinderella
-  - Snow White
-  - Aurora
-  - Ariel
-  - Flounder
-  - Sebastian
-  - Belle
-  - Beast
-  - Mulan
-  - Mushu
-  - Tiana
-  - Merida
-  - Dumbo
-  - Bambi
-  - Pinocchio
-  - Alice
-  - Cheshire Cat
-  - Mirabel
-  - Bruno
-  - Luisa
-  - Isabela
-  - Luca
-  - Alberto
-  - Asha
-  - Hello Kitty
-  - My Melody
-  - Kuromi
-  - Cinnamoroll
-  - Pompompurin
-  - Pochacco
-  - Keroppi
-  - Badtz-Maru
-  - Hangyodon
-  - Little Twin Stars
-  - Kiki
-  - Lala
-  - Marron Cream
-  - Usahana
-  - Gudetama
-  - My Sweet Piano
-  - Totoro
-  - Medium Totoro
-  - Small Totoro
-  - Catbus
-  - Jiji
-  - Jiji the Black Cat
-  - No-Face
-  - Haku
-  - Chihiro
-  - Yubaba
-  - Ponyo
-  - Sosuke
-  - Howl
-  - Sophie
-  - Calcifer
-  - San
-  - Ashitaka
-  - Yakul
-  - Kodama
-  - Nausicaa
-  - Teto
-  - Mei
-  - Satsuki
-  - Arrietty
-  - Baron
-  - Muta
-  - Pikachu
-  - Eevee
-  - Charmander
-  - Charizard
-  - Squirtle
-  - Blastoise
-  - Bulbasaur
-  - Snorlax
-  - Mew
-  - Mewtwo
-  - Dragonite
-  - Jigglypuff
-  - Pichu
-  - Lucario
-  - Lugia
-  - Ho-Oh
-  - Growlithe
-  - Arcanine
-  - Magikarp
-  - Gyarados
-  - Emolga
-  - Psyduck
-  - Sylveon
-  - Umbreon
-  - Glaceon
-  - Leafeon
-  - Flareon
-  - Vaporeon
-  - Jolteon
-  - Ditto
-  - Raichu
-  - Shin-chan
-  - Shiro
-  - Kazama
-  - Nene
-  - Masao
-  - Bo
-  - Himawari
-  - Misae
-  - Hiroshi
-  - Ai
-  - Action Mask
-  - Bonobono
-  - Raccoon
-  - Porori
-  - Chipmunk
-  - Araiguma
-  - Chiikawa
-  - Hachiware
-  - Usagi
-  - Momonga
-  - Kurimanju
-  - Pat
-  - Mat
-  - Pat and Mat
-  - Toothless
-  - Light Fury
-  - Hiccup
-  - Astrid
-  - Night Fury
-  - Stormfly
-  - Luffy
-  - Zoro
-  - Nami
-  - Usopp
-  - Sanji
-  - Chopper
-  - Robin
-  - Franky
-  - Brook
-  - Jinbe
-  - Law
-  - Ace
-  - Shanks
-  - Sabo
-  - Hancock
-  - Yamato
-  - Bepo
-  - Pororo
-  - Eddy
-  - Poby
-  - Crong
-  - Petty
-  - Harry
-  - Rody
-  - Tongtong
-  - Nyao
-  - Mashimaro
-  - Miffy
-  - Melanie
-  - Boris
-  - Snuffy
-  - Joking Bear
-  - Pingu
-  - Pinga
-  - SpongeBob
-  - Patrick
-  - Squidward
-  - Mr. Krabs
-  - Sandy
-  - Gary
-  - Moomin
-  - Snorkmaiden
-  - Little My
-  - Snufkin
-  - Brown
-  - Cony
-  - Sally
-  - Ryan
-  - Apeach
-  - Muzi
-  - Con
-  - Neo
-  - Frodo
-  - Tube
-  - Chunsik
-  - Peppa Pig
-  - George
-  - Mario
-  - Luigi
-  - Princess Peach
-  - Toad
-  - Yoshi
-  - Bowser
-  - Kirby
-  - Meta Knight
-  - Waddle Dee
-  - Finn
-  - Jake
-  - BMO
-  - Marceline
-  - Snoopy
-  - Charlie Brown
-  - Woodstock
-  - Doraemon
-  - Nobita
-  - Dorami
-  - Anpanman
-  - Baikinman
-  - Shokupanman
-  - Thomas
-  - Percy
-  - Molang
-  - Piu Piu
-  - Bbang Bbang
-  - Esther Bunny
-  - Zanmang Loopy
-  - Teletubbies
-  - Po
-  - Tinky Winky
-  - Tayo
-  - Rogi
-  - Lani
-  - Gani
-  - Poli
-  - Roy
-  - Amber
-  - Helly
-  - Cocomong
-  - Heartsping
-  - TinyPing
-  - Azaping
-  - Jett
-  - Super Wings
-  - Bob
-  - Kevin
-  - Stuart
-  - Minions
-  - Goku
-  - Vegeta
-  - Tanjiro
-  - Nezuko
-  - Zenitsu
-  - Inosuke
-  - Rengoku
-  - Naruto
-  - Sasuke
-  - Kakashi
-  - Kurama
-  - Tata
-  - Chimmy
-  - Cooky
-  - Mang
-  - Koya
-  - BT21
+  # Disney Classic Characters
+  - label: "Mickey Mouse"
+    description: "black round mouse ears, red shorts with white buttons, white gloves, yellow shoes, black nose"
+  - label: "Minnie Mouse"
+    description: "black round mouse ears, red polka dot bow, red polka dot dress, white gloves, pink shoes"
+  - label: "Donald Duck"
+    description: "white duck, blue sailor hat with black ribbon, blue sailor suit, orange beak and feet, no pants"
+  - label: "Daisy Duck"
+    description: "white female duck, purple bow on head, purple outfit, orange beak, long eyelashes"
+  - label: "Goofy"
+    description: "tall black dog, green hat, orange turtleneck, black vest, brown pants, big floppy ears"
+  - label: "Pluto"
+    description: "yellow-orange dog, green collar, long floppy ears, four legs, no clothes, black nose"
+  - label: "Chip"
+    description: "small brown chipmunk, black nose, one front tooth, no red nose"
+  - label: "Dale"
+    description: "small brown chipmunk, red nose, two front teeth, messy hair tuft"
+
+  # Frozen
+  - label: "Elsa"
+    description: "platinum blonde braid, blue sparkly ice dress, pale skin, ice powers, blue eyes"
+  - label: "Anna"
+    description: "strawberry blonde hair with white streak, green eyes, pink cheeks, braids, green or purple dress"
+  - label: "Olaf"
+    description: "white snowman, carrot nose, stick arms, three black coal buttons, buck teeth, twig hair"
+
+  # Disney Princesses & Related
+  - label: "Rapunzel"
+    description: "extremely long golden blonde hair, purple dress, green eyes, barefoot, pink flowers in hair"
+  - label: "Moana"
+    description: "dark curly hair, brown skin, red and tan outfit, ocean themed, Polynesian girl, no shoes"
+  - label: "Aladdin"
+    description: "black hair, tan skin, purple vest, white baggy pants, no shirt, barefoot, fez hat"
+  - label: "Jasmine"
+    description: "long black hair, turquoise/teal outfit, gold earrings, brown skin, midriff showing"
+  - label: "Genie"
+    description: "large blue muscular figure, no legs (tail), gold cuffs, pointed ears, goatee beard"
+  - label: "Cinderella"
+    description: "blonde hair in updo, blue ball gown, glass slippers, black choker, blue headband"
+  - label: "Snow White"
+    description: "black short hair with red headband, yellow and blue dress, red lips, pale skin, puffy sleeves"
+  - label: "Aurora"
+    description: "long golden blonde hair, pink or blue dress, crown, sleeping beauty, tall and slim"
+  - label: "Ariel"
+    description: "red long hair, green mermaid tail, purple seashell bra, blue eyes, underwater princess"
+  - label: "Flounder"
+    description: "small yellow and blue striped tropical fish, big eyes, fins, Ariel's friend"
+  - label: "Sebastian"
+    description: "red crab, Jamaican accent implied, big eyes, claws, under the sea"
+  - label: "Belle"
+    description: "brown hair in ponytail, yellow ball gown, book lover, brown eyes, blue village dress"
+  - label: "Beast"
+    description: "large furry creature, brown fur, horns, cape, torn purple pants, fangs, blue eyes"
+  - label: "Mulan"
+    description: "straight black hair, Chinese warrior, red and green outfit, sword, determined expression"
+  - label: "Mushu"
+    description: "small red Chinese dragon, skinny, big ears, yellow belly, comedic expression"
+  - label: "Tiana"
+    description: "dark skin, black hair, green dress, lily pad theme, New Orleans, brown eyes, dimples"
+  - label: "Merida"
+    description: "wild curly red hair, blue medieval dress, bow and arrow, Scottish princess, freckles"
+
+  # Lilo & Stitch
+  - label: "Stitch"
+    description: "blue alien koala-like creature, big ears, four arms sometimes, large black eyes, pink inside ears"
+
+  # Winnie the Pooh
+  - label: "Pooh"
+    description: "yellow bear, red crop top shirt, round belly, no pants, honey pot, small ears"
+  - label: "Winnie the Pooh"
+    description: "yellow bear, red crop top shirt, round belly, no pants, honey pot, small ears"
+  - label: "Piglet"
+    description: "small pink pig, striped pink shirt, very tiny, big ears, timid expression"
+  - label: "Tigger"
+    description: "orange tiger with black stripes, bouncy, spring tail, pink nose, happy expression"
+  - label: "Eeyore"
+    description: "gray donkey, pink bow on tail, sad droopy expression, detachable tail with pink ribbon"
+
+  # Lion King
+  - label: "Simba"
+    description: "golden lion, red mane as adult, orange-brown fur, green eyes, lion cub or adult"
+  - label: "Nala"
+    description: "tan/cream colored lioness, blue eyes, no mane, female lion"
+  - label: "Pumbaa"
+    description: "brown warthog, tusks, large round body, red hair mohawk, big snout"
+  - label: "Timon"
+    description: "small brown meerkat, standing upright, thin body, big eyes, long tail"
+
+  # Toy Story
+  - label: "Buzz"
+    description: "white and green space ranger suit, purple hood, clear helmet, wings, square jaw"
+  - label: "Woody"
+    description: "cowboy hat, yellow plaid shirt, cow print vest, brown boots, pull string, sheriff badge"
+  - label: "Jessie"
+    description: "red cowgirl hat, yarn red hair braid, cow print chaps, yodeling cowgirl, green eyes"
+  - label: "Rex"
+    description: "green T-Rex dinosaur toy, small arms, anxious expression, plastic texture"
+  - label: "Forky"
+    description: "spork with googly eyes, pipe cleaner arms, popsicle stick feet, red mouth, confused look"
+  - label: "Hamm"
+    description: "pink piggy bank, cork nose, coin slot on back, round body"
+  - label: "Alien"
+    description: "green three-eyed alien, blue suit, antenna, claw machine toy, the claw"
+
+  # Monsters Inc
+  - label: "Mike"
+    description: "round green one-eyed monster, single large eye, small horns, thin arms and legs"
+  - label: "Sulley"
+    description: "large blue furry monster, purple spots, horns, big gentle smile, James P Sullivan"
+
+  # Other Pixar
+  - label: "Wall-E"
+    description: "small rusty yellow robot, box body, binocular eyes, tank treads, solar powered"
+  - label: "Eve"
+    description: "sleek white egg-shaped robot, blue LED eyes, hovering, futuristic, black screen face"
+  - label: "Nemo"
+    description: "small orange clownfish, white stripes, one small fin, big eyes, black outlines"
+  - label: "Dory"
+    description: "blue tang fish, yellow tail, black markings, forgetful, big smile, Pixar"
+  - label: "Remy"
+    description: "small gray rat, big ears, chef hat sometimes, pink nose, Ratatouille, blue-gray fur"
+
+  # Big Hero 6
+  - label: "Baymax"
+    description: "large white inflatable robot, round body, black dot eyes, healthcare companion, puffy"
+
+  # Wreck-It Ralph
+  - label: "Wreck-It Ralph"
+    description: "large man with huge fists, brown hair, red plaid shirt, overalls, video game villain"
+  - label: "Vanellope"
+    description: "small girl, black hair with candy, mint green hoodie, glitching effect, racing"
+
+  # Zootopia
+  - label: "Judy Hopps"
+    description: "gray rabbit, purple eyes, police uniform, long ears, pink nose, ZPD badge"
+  - label: "Nick Wilde"
+    description: "orange fox, green Hawaiian shirt, sly smile, tie, brown eyes, pointed ears"
+
+  # Classic Disney
+  - label: "Dumbo"
+    description: "baby elephant, huge floppy ears, blue eyes, small hat, can fly, circus elephant"
+  - label: "Bambi"
+    description: "young deer fawn, white spots, big brown eyes, wobbly legs, forest setting"
+  - label: "Pinocchio"
+    description: "wooden puppet boy, long nose when lying, blue eyes, yellow hat with red feather, lederhosen"
+  - label: "Alice"
+    description: "blonde girl, blue dress with white apron, black headband, Wonderland, curious expression"
+  - label: "Cheshire Cat"
+    description: "pink and purple striped cat, huge grin, can disappear, floating, mischievous"
+
+  # Encanto
+  - label: "Mirabel"
+    description: "curly black hair, glasses, colorful embroidered dress, no magical gift, Colombian"
+  - label: "Bruno"
+    description: "thin man, green poncho with hood, unshaven, rats, prophecy, hidden character"
+  - label: "Luisa"
+    description: "muscular woman, blue dress, strong, carries donkeys, emotional, black hair"
+  - label: "Isabela"
+    description: "long black hair with flowers, purple dress, creates flowers, perfect older sister"
+
+  # Luca
+  - label: "Luca"
+    description: "sea monster boy, turns human on land, brown hair, green-blue scales underwater, Italian"
+  - label: "Alberto"
+    description: "sea monster boy, purple scales, curly hair when human, confident, older friend"
+
+  # Wish
+  - label: "Asha"
+    description: "dark skin, lavender braids, purple dress, wishing star, Rosas kingdom"
+
+  # Sanrio Characters
+  - label: "Hello Kitty"
+    description: "white cat, red bow on left ear, no mouth, yellow nose, whiskers, blue overalls"
+  - label: "My Melody"
+    description: "white rabbit, pink hood with ears, pink flower on hood, cute round eyes"
+  - label: "Kuromi"
+    description: "white rabbit, black jester hood with pink skull, mischievous, purple eyes"
+  - label: "Cinnamoroll"
+    description: "white puppy, long ears that look like cinnamon rolls, blue eyes, pink cheeks, can fly"
+  - label: "Pompompurin"
+    description: "golden retriever dog, brown beret, brown ears poking out, round body, happy smile"
+  - label: "Pochacco"
+    description: "white dog, black floppy ears, blue eyes, sporty, no headwear, playful"
+  - label: "Keroppi"
+    description: "green frog, big eyes with V-shaped pupils, red and white striped shirt, happy"
+  - label: "Badtz-Maru"
+    description: "black penguin, spiky hair, mischievous expression, yellow beak, cool attitude"
+  - label: "Hangyodon"
+    description: "blue fish character, legs, goofy expression, green lips, underwater theme"
+  - label: "Little Twin Stars"
+    description: "twin characters Kiki and Lala, star theme, pastel colors, boy and girl pair"
+  - label: "Kiki"
+    description: "blue haired boy star, Little Twin Stars, broom, pastel blue theme"
+  - label: "Lala"
+    description: "pink haired girl star, Little Twin Stars, pastel pink theme, curly hair"
+  - label: "Marron Cream"
+    description: "cream colored bunny, pink hat with flower, elegant, vintage style"
+  - label: "Usahana"
+    description: "pink rabbit with flower, ballet theme, graceful, flowers around"
+  - label: "Gudetama"
+    description: "lazy egg yolk, lying down, unmotivated expression, orange-yellow color, butt showing"
+  - label: "My Sweet Piano"
+    description: "white sheep, pink bow, fluffy wool, My Melody's friend, sweet expression"
+
+  # Studio Ghibli
+  - label: "Totoro"
+    description: "large gray furry forest spirit, round belly, pointy ears, wide grin, umbrella, whiskers"
+  - label: "Medium Totoro"
+    description: "blue medium-sized Totoro, same features as big Totoro but smaller and blue"
+  - label: "Small Totoro"
+    description: "tiny white Totoro, smallest of three, can turn invisible, white fur"
+  - label: "Catbus"
+    description: "cat-shaped bus, twelve legs, glowing eyes, fur covered bus, windows for eyes"
+  - label: "Jiji"
+    description: "black cat, yellow eyes, Kiki's companion, sarcastic, can talk, red collar"
+  - label: "Jiji the Black Cat"
+    description: "black cat, yellow eyes, Kiki's companion, sarcastic, can talk, red collar"
+  - label: "No-Face"
+    description: "black transparent spirit, white mask face, can grow large, eats everything, shy"
+  - label: "Haku"
+    description: "boy with dark hair or white dragon form, green-blue colors, Spirited Away"
+  - label: "Chihiro"
+    description: "young Japanese girl, brown hair in ponytail, pink shirt, determined, Spirited Away"
+  - label: "Yubaba"
+    description: "large headed witch, huge nose, jewelry, runs bathhouse, intimidating old woman"
+  - label: "Ponyo"
+    description: "goldfish girl, red dress, round face, transforms to human, orange hair, loves ham"
+  - label: "Sosuke"
+    description: "young boy, striped shirt, lives by sea, Ponyo's friend, bucket hat"
+  - label: "Howl"
+    description: "blonde wizard, moving castle, transforms to bird monster, blue eyes, flamboyant"
+  - label: "Sophie"
+    description: "young woman or old silver-haired woman, blue dress, curse victim, kind expression"
+  - label: "Calcifer"
+    description: "small fire demon, orange flame with face, lives in fireplace, scared of water"
+  - label: "San"
+    description: "wolf girl, white fur cape, red face markings, wolf mask, Princess Mononoke"
+  - label: "Ashitaka"
+    description: "young man, blue outfit, cursed arm, bow and arrow, elk rider, determined"
+  - label: "Yakul"
+    description: "red elk, Ashitaka's mount, antlers, loyal animal companion"
+  - label: "Kodama"
+    description: "small white tree spirits, rattling heads, simple face, forest spirits"
+  - label: "Nausicaa"
+    description: "young woman, blue outfit, glider pilot, loves insects, post-apocalyptic princess"
+  - label: "Teto"
+    description: "small fox-squirrel, orange and white fur, Nausicaa's pet, big ears"
+  - label: "Mei"
+    description: "small Japanese girl, yellow dress, pigtails, younger sister, finds Totoros"
+  - label: "Satsuki"
+    description: "older Japanese girl, orange dress, short hair, responsible older sister"
+  - label: "Arrietty"
+    description: "tiny borrower girl, red hair clip, green dress, miniature size, carries pin sword"
+  - label: "Baron"
+    description: "cat figurine gentleman, top hat, suit, cane, orange and cream fur, dignified"
+  - label: "Muta"
+    description: "large fat white and gray cat, grumpy, The Cat Returns, big body"
+
+  # Pokemon
+  - label: "Pikachu"
+    description: "yellow electric mouse, red cheeks, lightning bolt tail, pointed ears with black tips"
+  - label: "Eevee"
+    description: "brown fluffy fox-like Pokemon, big ears, fluffy tail and neck fur, big eyes"
+  - label: "Charmander"
+    description: "orange lizard Pokemon, flame on tail tip, blue eyes, bipedal, fire type"
+  - label: "Charizard"
+    description: "large orange dragon Pokemon, wings, flame tail, blue inside wings, fierce"
+  - label: "Squirtle"
+    description: "blue turtle Pokemon, shell, curly tail, water type, cute smile"
+  - label: "Blastoise"
+    description: "large blue turtle Pokemon, water cannons from shell, brown shell"
+  - label: "Bulbasaur"
+    description: "blue-green Pokemon with plant bulb on back, red eyes, spots, four legs"
+  - label: "Snorlax"
+    description: "huge sleeping Pokemon, blue-green body, cream belly, always sleepy, blocks paths"
+  - label: "Mew"
+    description: "small pink cat-like Pokemon, long thin tail, floats, rare mythical, big blue eyes"
+  - label: "Mewtwo"
+    description: "purple humanoid Pokemon, long purple tail, psychic, armored look, fierce"
+  - label: "Dragonite"
+    description: "orange dragon Pokemon, small wings, antenna, friendly face, round belly"
+  - label: "Jigglypuff"
+    description: "round pink balloon Pokemon, big blue eyes, curl of hair, microphone, singing"
+  - label: "Pichu"
+    description: "tiny baby Pikachu, big ears, small body, pink cheeks, electric type baby"
+  - label: "Lucario"
+    description: "blue and black jackal Pokemon, steel spikes, aura powers, bipedal fighter"
+  - label: "Lugia"
+    description: "large white and blue legendary bird, long neck, psychic, ocean guardian"
+  - label: "Ho-Oh"
+    description: "rainbow phoenix Pokemon, golden and rainbow feathers, legendary fire bird"
+  - label: "Growlithe"
+    description: "orange puppy Pokemon with black stripes, fluffy, fire type, loyal"
+  - label: "Arcanine"
+    description: "large majestic orange dog Pokemon, cream mane, black stripes, legendary-looking"
+  - label: "Magikarp"
+    description: "orange fish Pokemon, useless, splashing, whiskers, crown-like fin"
+  - label: "Gyarados"
+    description: "large blue sea serpent Pokemon, fierce, red fins, whiskers, very angry"
+  - label: "Emolga"
+    description: "flying squirrel Pokemon, white and black, yellow cheeks, electric type, cape-wings"
+  - label: "Psyduck"
+    description: "yellow duck Pokemon, always has headache, holding head, confused expression"
+  - label: "Sylveon"
+    description: "pink and white fairy Eevee evolution, ribbons, blue eyes, bows"
+  - label: "Umbreon"
+    description: "black Eevee evolution, yellow rings that glow, red eyes, dark type"
+  - label: "Glaceon"
+    description: "ice blue Eevee evolution, diamond patterns, icy appearance, teal color"
+  - label: "Leafeon"
+    description: "tan and green Eevee evolution, leaf ears and tail, grass type"
+  - label: "Flareon"
+    description: "orange fluffy Eevee evolution, flame-like fur, fire type, fluffy collar"
+  - label: "Vaporeon"
+    description: "blue aquatic Eevee evolution, fin ears, mermaid-like tail, water type"
+  - label: "Jolteon"
+    description: "yellow spiky Eevee evolution, spiky fur, electric type, no tail tuft"
+  - label: "Ditto"
+    description: "pink blob Pokemon, simple dot eyes, simple curved mouth, can transform"
+  - label: "Raichu"
+    description: "orange evolved Pikachu, long tail with lightning bolt, bigger ears, rounder"
+
+  # Crayon Shin-chan
+  - label: "Shin-chan"
+    description: "young boy, black bowl-cut hair, thick eyebrows, exposed butt gag, mischievous"
+  - label: "Shiro"
+    description: "fluffy white dog, Shin-chan's pet, very fluffy, cute simple face"
+  - label: "Kazama"
+    description: "boy with black hair, glasses, Shin-chan's smart friend, neat appearance"
+  - label: "Nene"
+    description: "girl with orange curly hair, rabbit stuffed toy, Shin-chan's friend"
+  - label: "Masao"
+    description: "bald boy with one hair, timid, Shin-chan's crying friend, small"
+  - label: "Bo"
+    description: "large boy, slow, big body, Shin-chan's friend, simple expression"
+  - label: "Himawari"
+    description: "baby girl, Shin-chan's sister, bow on head, loves handsome men"
+  - label: "Misae"
+    description: "Shin-chan's mother, brown hair, often angry at Shin-chan, housewife"
+  - label: "Hiroshi"
+    description: "Shin-chan's father, smelly feet, salaryman, kind but tired"
+  - label: "Ai"
+    description: "rich girl, long black hair, likes Shin-chan, pink outfit, ojou-sama"
+  - label: "Action Mask"
+    description: "superhero, mask on face, Shin-chan's favorite TV hero, justice pose"
+
+  # Bonobono
+  - label: "Bonobono"
+    description: "blue sea otter, round body, curious expression, simple face, floating in water"
+  - label: "Raccoon"
+    description: "gray raccoon, Bonobono's friend, striped tail, more aggressive personality"
+  - label: "Porori"
+    description: "small yellow raccoon dog, innocent looking, baby-like, Bonobono character"
+  - label: "Chipmunk"
+    description: "small brown chipmunk, energetic, Bonobono's friend, striped back"
+  - label: "Araiguma"
+    description: "raccoon character, washing hands pose, mask marking on face"
+
+  # Chiikawa
+  - label: "Chiikawa"
+    description: "small white round creature, pink cheeks, tiny body, cute but anxious, simple face"
+  - label: "Hachiware"
+    description: "white and blue cat-like creature, half blue face, happy expression, Chiikawa friend"
+  - label: "Usagi"
+    description: "white rabbit character, long ears, chaotic energy, Chiikawa friend, mischievous"
+  - label: "Momonga"
+    description: "small flying squirrel, pink cheeks, cape-like membrane, tiny and cute"
+  - label: "Kurimanju"
+    description: "brown chestnut-shaped creature, simple face, food-based character"
+
+  # Pat & Mat
+  - label: "Pat"
+    description: "man with red sweater, flat cap, DIY enthusiast, clumsy, stop-motion animation"
+  - label: "Mat"
+    description: "man with yellow sweater, flat cap, DIY enthusiast, clumsy, Pat's neighbor"
+  - label: "Pat and Mat"
+    description: "two men in red and yellow sweaters, flat caps, DIY disasters, stop-motion"
+
+  # How to Train Your Dragon
+  - label: "Toothless"
+    description: "black dragon, green eyes, no visible teeth when closed, Night Fury, retractable teeth"
+  - label: "Light Fury"
+    description: "white sparkly dragon, blue eyes, female Night Fury variant, elegant"
+  - label: "Hiccup"
+    description: "thin Viking boy, brown hair, prosthetic leg, green eyes, dragon rider"
+  - label: "Astrid"
+    description: "blonde Viking girl, blue eyes, braid, warrior, axe wielder"
+  - label: "Night Fury"
+    description: "black dragon species, Toothless, green eyes, sleek black body, rare"
+  - label: "Stormfly"
+    description: "blue and yellow dragon, spiky, Deadly Nadder, Astrid's dragon"
+
+  # One Piece
+  - label: "Luffy"
+    description: "straw hat, black messy hair, scar under eye, red vest, rubber powers, big smile"
+  - label: "Zoro"
+    description: "green hair, three swords, scar on eye, white shirt, serious expression, lost easily"
+  - label: "Nami"
+    description: "orange hair, tattoo on arm, navigator, cat burglar, bikini top often"
+  - label: "Usopp"
+    description: "long nose, curly black hair, goggles, sniper, lies a lot, bandana"
+  - label: "Sanji"
+    description: "blonde hair covering one eye, curly eyebrow, suit, cigarette, cook, kicking"
+  - label: "Chopper"
+    description: "small reindeer with blue nose, pink hat with X, can transform, doctor, cute"
+  - label: "Robin"
+    description: "black hair, calm expression, archaeologist, multiple arms power, mature"
+  - label: "Franky"
+    description: "blue hair, cyborg body, speedo, SUPER pose, metal parts, big body"
+  - label: "Brook"
+    description: "skeleton with afro, top hat, soul music, tall thin skeleton, gentleman"
+  - label: "Jinbe"
+    description: "blue whale shark fishman, big body, kimono, helmsman, honorable"
+  - label: "Law"
+    description: "spotted hat, goatee, tattoos on hands, sword, surgeon, dark circles"
+  - label: "Ace"
+    description: "shirtless, fire powers, orange hat, freckles, bead necklace, Luffy's brother"
+  - label: "Shanks"
+    description: "red hair, missing left arm, scar over eye, cape, straw hat giver"
+  - label: "Sabo"
+    description: "blonde wavy hair, pipe weapon, top hat with goggles, scar on eye, blue coat"
+  - label: "Hancock"
+    description: "long black hair, snake earrings, very tall beautiful woman, empress, loves Luffy"
+  - label: "Yamato"
+    description: "white hair with horns, sideboob outfit, Kaido's child, wants to be Oden"
+  - label: "Bepo"
+    description: "white polar bear in orange jumpsuit, Law's crewmate, martial arts, apologetic"
+
+  # Pororo
+  - label: "Pororo"
+    description: "blue penguin, aviator goggles and hat, orange beak, curious, Korean animation"
+  - label: "Eddy"
+    description: "orange fox, inventor, glasses, smart, Pororo's friend, builds things"
+  - label: "Poby"
+    description: "white polar bear, gentle giant, kind, Pororo's friend, big and soft"
+  - label: "Crong"
+    description: "small green dinosaur, Pororo's little brother/pet, baby-like, playful"
+  - label: "Petty"
+    description: "pink female penguin, bow on head, Pororo's friend, girly"
+  - label: "Harry"
+    description: "yellow hummingbird, small, can fly, Pororo's friend, energetic"
+  - label: "Rody"
+    description: "orange robot, Pororo's friend, mechanical, helpful, round"
+  - label: "Tongtong"
+    description: "green dragon/wizard, magic powers, wise, Pororo character"
+  - label: "Nyao"
+    description: "white cat ninja, mysterious, agile, Pororo character, sneaky"
+
+  # Other Characters
+  - label: "Mashimaro"
+    description: "white fat rabbit, mischievous, tube-like body, no visible mouth, Korean character"
+  - label: "Miffy"
+    description: "white rabbit, simple X mouth, Dutch character, primary colors, Dick Bruna style"
+  - label: "Melanie"
+    description: "brown rabbit, Miffy's friend, similar simple style, Dutch character"
+  - label: "Boris"
+    description: "brown bear, Miffy's friend, simple style, round ears"
+  - label: "Snuffy"
+    description: "brown dog, Miffy's friend, floppy ears, simple style"
+  - label: "Joking Bear"
+    description: "brown teddy bear, Korean character, cute expression, plush toy style"
+  - label: "Pingu"
+    description: "black and white penguin, clay animation, honking sound, Antarctic setting"
+  - label: "Pinga"
+    description: "small penguin, Pingu's little sister, pink bow sometimes, baby penguin"
+
+  # SpongeBob
+  - label: "SpongeBob"
+    description: "yellow square sponge, big blue eyes, square pants, buck teeth, holes in body"
+  - label: "Patrick"
+    description: "pink starfish, green shorts with flowers, dumb expression, pointy head"
+  - label: "Squidward"
+    description: "turquoise octopus, big nose, grumpy, brown shirt, plays clarinet badly"
+  - label: "Mr. Krabs"
+    description: "red crab, money obsessed, blue shirt, big claws, cheap, Krusty Krab owner"
+  - label: "Sandy"
+    description: "brown squirrel in space suit, underwater dome, Texas, karate, scientist"
+  - label: "Gary"
+    description: "blue snail with pink shell, SpongeBob's pet, meows like cat, slime trail"
+
+  # Moomin
+  - label: "Moomin"
+    description: "white hippo-like troll, round body, Finnish character, gentle, blue background usually"
+  - label: "Snorkmaiden"
+    description: "white Moomin-like female, blonde fringe, anklet, Moomintroll's girlfriend"
+  - label: "Little My"
+    description: "tiny girl with hair bun, red dress, mischievous, fierce, very small"
+  - label: "Snufkin"
+    description: "vagabond with green hat, fishing rod, harmonica, Moomintroll's best friend"
+
+  # LINE Friends
+  - label: "Brown"
+    description: "brown bear, expressionless, simple face, LINE character, stoic"
+  - label: "Cony"
+    description: "white rabbit, expressive, Brown's girlfriend, LINE character, energetic"
+  - label: "Sally"
+    description: "yellow chick, small, fluffy, LINE character, round body, no wings visible"
+
+  # Kakao Friends
+  - label: "Ryan"
+    description: "lion without mane, round face, leaf on head, Kakao Friends, expressionless brown bear-like"
+  - label: "Apeach"
+    description: "pink peach with butt shape, mischievous, Kakao Friends, cute face"
+  - label: "Muzi"
+    description: "yellow pickled radish in rabbit costume, Kakao Friends, takuan"
+  - label: "Con"
+    description: "small green crocodile tail, Muzi's friend, Kakao Friends, hides in costume"
+  - label: "Neo"
+    description: "fashionable cat, silver hair, trendy, Kakao Friends, stylish"
+  - label: "Frodo"
+    description: "dog with city style, sunglasses, rich kid, Kakao Friends"
+  - label: "Tube"
+    description: "scared duck in disguise, paranoid, Kakao Friends, hides fear"
+  - label: "Chunsik"
+    description: "Ryan's friend, white cat-like, simple face, Kakao Friends newer character"
+
+  # Peppa Pig
+  - label: "Peppa Pig"
+    description: "pink pig, side view face, red dress, British accent, jumping in puddles"
+  - label: "George"
+    description: "small pink pig, Peppa's brother, blue shirt, dinosaur obsessed, younger"
+
+  # Nintendo
+  - label: "Mario"
+    description: "red cap with M, blue overalls, brown mustache, Italian plumber, red shirt"
+  - label: "Luigi"
+    description: "green cap with L, blue overalls, taller than Mario, green shirt, scared"
+  - label: "Princess Peach"
+    description: "blonde hair, pink dress, crown, damsel, blue eyes, elegant"
+  - label: "Toad"
+    description: "mushroom head, white with red spots, blue vest, small, cute voice"
+  - label: "Yoshi"
+    description: "green dinosaur, red saddle, long tongue, big nose, cute, rideable"
+  - label: "Bowser"
+    description: "large turtle dragon, spiky shell, red hair, villain, fire breathing, horns"
+  - label: "Kirby"
+    description: "pink round puffball, red feet, blue eyes, can inhale and copy abilities"
+  - label: "Meta Knight"
+    description: "blue round knight, mask, cape, sword, wings, mysterious, Kirby rival"
+  - label: "Waddle Dee"
+    description: "orange round creature, simple face, bandana sometimes, Kirby character"
+
+  # Adventure Time
+  - label: "Finn"
+    description: "human boy, white bear hat, blue shirt, backpack, adventurer, blonde hair hidden"
+  - label: "Jake"
+    description: "yellow stretchy dog, magical, lazy, Finn's best friend, can shapeshift"
+  - label: "BMO"
+    description: "small teal game console robot, face on screen, living video game, cute"
+  - label: "Marceline"
+    description: "vampire queen, long black hair, bass guitar axe, gray skin, bite marks"
+
+  # Peanuts
+  - label: "Snoopy"
+    description: "white beagle with black ears, red doghouse, pilot fantasies, cool"
+  - label: "Charlie Brown"
+    description: "round headed boy, zigzag shirt, bald with little hair, unlucky, kind"
+  - label: "Woodstock"
+    description: "tiny yellow bird, Snoopy's friend, messy feathers, can't fly well"
+
+  # Doraemon
+  - label: "Doraemon"
+    description: "blue robot cat, no ears, 4D pocket, red nose, white belly, bell collar"
+  - label: "Nobita"
+    description: "boy with glasses, lazy student, Doraemon's friend, black hair, yellow shirt"
+  - label: "Dorami"
+    description: "yellow robot cat, Doraemon's sister, bow on head, red nose, ears intact"
+
+  # Anpanman
+  - label: "Anpanman"
+    description: "bread head hero, anpan (red bean bun) for head, cape, gives head to hungry"
+  - label: "Baikinman"
+    description: "purple germ villain, antenna, UFO, Anpanman's enemy, mischievous"
+  - label: "Shokupanman"
+    description: "white bread slice hero, handsome, Anpanman's friend, white bread head"
+
+  # Thomas & Friends
+  - label: "Thomas"
+    description: "blue tank engine, number 1, cheeky face, steam train, Thomas & Friends"
+  - label: "Percy"
+    description: "green small engine, number 6, Thomas's best friend, mail train"
+
+  # Molang
+  - label: "Molang"
+    description: "round white rabbit, very round body, simple face, Korean character, cheerful"
+  - label: "Piu Piu"
+    description: "small yellow chick, Molang's friend, tiny, simple design"
+  - label: "Bbang Bbang"
+    description: "brown character, bread related, Molang universe, round"
+
+  # Other Korean Characters
+  - label: "Esther Bunny"
+    description: "pink bunny, long ears, cute expression, Korean character, feminine"
+  - label: "Zanmang Loopy"
+    description: "pink beaver, round body, cute, Korean character, Pororo spin-off"
+
+  # Teletubbies
+  - label: "Teletubbies"
+    description: "four colorful characters with TV bellies and antenna, baby show, British"
+  - label: "Po"
+    description: "smallest red Teletubby, circular antenna, scooter, youngest"
+  - label: "Tinky Winky"
+    description: "largest purple Teletubby, triangle antenna, red bag, tallest"
+
+  # Korean Kids Shows
+  - label: "Tayo"
+    description: "small blue bus, friendly face, Korean animation, city bus, big eyes"
+  - label: "Rogi"
+    description: "green bus, Tayo's friend, grumpy sometimes, green color"
+  - label: "Lani"
+    description: "yellow bus, female, Tayo's friend, small yellow bus"
+  - label: "Gani"
+    description: "red bus, strong, Tayo's friend, big red bus"
+  - label: "Poli"
+    description: "blue police car robot, transforms, Robocar Poli, leader"
+  - label: "Roy"
+    description: "red fire truck robot, transforms, Robocar Poli, strong"
+  - label: "Amber"
+    description: "pink ambulance robot, transforms, Robocar Poli, medic, female"
+  - label: "Helly"
+    description: "blue helicopter robot, transforms, Robocar Poli, flies"
+  - label: "Cocomong"
+    description: "monkey in coconut shell, Korean animation, food adventure"
+  - label: "Heartsping"
+    description: "fairy character, Catch Teenieping, wings, magical girl theme"
+  - label: "TinyPing"
+    description: "small fairy creature, Catch Teenieping, various colors and emotions"
+  - label: "Azaping"
+    description: "blue TinyPing character, Catch Teenieping, specific emotion fairy"
+  - label: "Jett"
+    description: "red airplane, Super Wings, main character, transforms to robot"
+  - label: "Super Wings"
+    description: "transforming airplane characters, deliver packages worldwide, robots"
+
+  # Minions
+  - label: "Bob"
+    description: "small minion with two different colored eyes, teddy bear, youngest vibe"
+  - label: "Kevin"
+    description: "tall minion, two eyes, leader of trio, sensible, Minions movie"
+  - label: "Stuart"
+    description: "one-eyed minion, laid back, plays guitar, cool attitude, medium height"
+  - label: "Minions"
+    description: "yellow pill-shaped creatures, goggles, blue overalls, gibberish language"
+
+  # Anime
+  - label: "Goku"
+    description: "spiky black hair, orange gi, muscular, Saiyan, Kamehameha pose, Dragon Ball"
+  - label: "Vegeta"
+    description: "black flame-shaped hair, blue suit, proud, Saiyan prince, shorter, Dragon Ball"
+  - label: "Tanjiro"
+    description: "black and red hair, scar on forehead, checkered haori, earrings, kind eyes"
+  - label: "Nezuko"
+    description: "pink kimono, bamboo muzzle in mouth, demon girl, black to orange gradient hair"
+  - label: "Zenitsu"
+    description: "yellow hair, scared expression, sleeping fighter, yellow haori, cowardly"
+  - label: "Inosuke"
+    description: "boar mask, shirtless, two swords, muscular, wild, blue hair underneath"
+  - label: "Rengoku"
+    description: "flame-colored hair, flame haori, enthusiastic smile, flame pillar, eyebrows"
+  - label: "Naruto"
+    description: "blonde spiky hair, orange jumpsuit, whisker marks on cheeks, headband, ninja"
+  - label: "Sasuke"
+    description: "black spiky hair, blue shirt, Uchiha clan, rival, red eyes sharingan"
+  - label: "Kakashi"
+    description: "silver spiky hair, mask covering face, one eye covered, headband tilted"
+  - label: "Kurama"
+    description: "orange nine-tailed fox, giant, inside Naruto, powerful, red eyes"
+
+  # BT21
+  - label: "Tata"
+    description: "red heart-shaped alien, BT21, stretchy body, expressionless, space theme"
+  - label: "Chimmy"
+    description: "yellow puppy in hoodie, BT21, tongue out, yellow body, playful"
+  - label: "Cooky"
+    description: "pink rabbit with one raised eyebrow, BT21, tough attitude, muscular wish"
+  - label: "Mang"
+    description: "blue horse with mask, BT21, hiding face, dancer, mysterious"
+  - label: "Koya"
+    description: "blue koala, BT21, sleepy, detachable ears, calm, genius"
+  - label: "BT21"
+    description: "LINE Friends x BTS characters, colorful cartoon characters, Korean pop themed"

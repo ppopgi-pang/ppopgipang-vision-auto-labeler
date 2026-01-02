@@ -36,11 +36,11 @@ clip_candidate:
   enabled: true
   model_name: "openai/clip-vit-base-patch32"
   device: "auto"
-  top_k: 20
+  top_k: 10
   top1_threshold: 0.40
   prompt_templates:
-    - "a plush toy of {character_name}"
-    - "a stuffed doll representing {character_name}"
+    - "a plush toy of {label}{description_clause}"
+    - "a stuffed doll representing {label}{description_clause}"
   labels_path: "configs/character_labels.yaml"
   cache_path: "data/artifacts/clip_text_embeddings.pt"
   text_batch_size: 64

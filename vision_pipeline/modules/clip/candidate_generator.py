@@ -26,13 +26,14 @@ class CLIPCandidateGenerator:
         self.prompt_templates = config.get(
             "prompt_templates",
             [
-                "a plush toy of {character_name}",
-                "a stuffed doll representing {character_name}",
+                "a plush toy of {label}{description_clause}",
+                "a stuffed doll representing {label}{description_clause}",
             ],
         )
         self.text_batch_size = int(config.get("text_batch_size", 64))
         self.cache_path = config.get("cache_path", "data/artifacts/clip_text_embeddings.pt")
-        self.labels = self._load_labels(config)
+        self.label_entries = self._load_label_entries(config)
+        self.labels = [entry["label"] for entry in self.label_entries]
         self._lock = Lock()
         self._available = False
 
@@ -89,7 +90,7 @@ class CLIPCandidateGenerator:
                 print("[CLIPCandidateGenerator] MPS not available, falling back to CPU")
                 self.device = "cpu"
 
-    def _load_labels(self, config: dict) -> list[str]:
+    def _load_label_entries(self, config: dict) -> list[dict]:
         labels = config.get("labels")
         labels_path = config.get("labels_path")
         if labels_path:
@@ -102,30 +103,93 @@ class CLIPCandidateGenerator:
                     data = yaml.safe_load(f)
                 if isinstance(data, dict) and "labels" in data:
                     labels = data.get("labels")
-                elif isinstance(data, list):
+                else:
                     labels = data
             except Exception as e:
                 print(f"[CLIPCandidateGenerator] Failed to load labels from {path}: {e}")
                 labels = None
-        if not labels:
-            return []
-        return [str(label).strip() for label in labels if str(label).strip()]
+        return self._normalize_label_entries(labels)
 
-    def _format_prompt(self, template: str, label: str) -> str:
+    def _normalize_label_entries(self, labels) -> list[dict]:
+        entries = []
+        if not labels:
+            return entries
+
+        if isinstance(labels, dict):
+            for label, description in labels.items():
+                entry = self._build_label_entry(label, description)
+                if entry:
+                    entries.append(entry)
+            return entries
+
+        if isinstance(labels, list):
+            for item in labels:
+                if isinstance(item, str):
+                    entry = self._build_label_entry(item, None)
+                elif isinstance(item, dict):
+                    if "label" in item:
+                        entry = self._build_label_entry(item.get("label"), item.get("description"))
+                    elif len(item) == 1:
+                        label, description = next(iter(item.items()))
+                        entry = self._build_label_entry(label, description)
+                    else:
+                        entry = None
+                else:
+                    entry = None
+                if entry:
+                    entries.append(entry)
+        return entries
+
+    def _build_label_entry(self, label, description) -> Optional[dict]:
+        if label is None:
+            return None
+        label_str = str(label).strip()
+        if not label_str:
+            return None
+        desc_str = ""
+        if description is not None:
+            desc_str = str(description).strip()
+        return {"label": label_str, "description": desc_str}
+
+    def _format_prompt(self, template: str, label: str, description: Optional[str] = None) -> str:
+        description = (description or "").strip()
+        description_clause = f", {description}" if description else ""
         try:
-            return template.format(character_name=label, label=label)
+            rendered = template.format(
+                character_name=label,
+                label=label,
+                description=description,
+                description_clause=description_clause,
+            )
         except KeyError:
-            return template.format(label=label)
+            rendered = template
+            rendered = rendered.replace("{character_name}", label)
+            rendered = rendered.replace("{label}", label)
+            rendered = rendered.replace("{description_clause}", description_clause)
+            rendered = rendered.replace("{description}", description)
+        if not description:
+            rendered = rendered.rstrip(" ,")
+        return rendered
 
     def _load_or_build_text_embeddings(self) -> torch.Tensor:
         cache_path = self._resolve_cache_path()
         if cache_path and cache_path.exists():
             try:
                 cached = torch.load(cache_path, map_location="cpu")
+                cached_entries = cached.get("label_entries")
+                cached_labels = cached.get("labels")
+                entries_match = False
+                if cached_entries is not None:
+                    entries_match = cached_entries == self.label_entries
+                elif cached_labels is not None:
+                    entries_match = cached_labels == self.labels and all(
+                        not entry.get("description") for entry in self.label_entries
+                    )
+
                 if (
                     cached.get("model_name") == self.model_name
                     and cached.get("prompt_templates") == self.prompt_templates
-                    and cached.get("labels") == self.labels
+                    and entries_match
                 ):
                     embeddings = cached.get("embeddings")
                     if isinstance(embeddings, torch.Tensor):
@@ -141,6 +205,7 @@ class CLIPCandidateGenerator:
                     "model_name": self.model_name,
                     "prompt_templates": self.prompt_templates,
                     "labels": self.labels,
+                    "label_entries": self.label_entries,
                     "embeddings": embeddings.detach().cpu(),
                 },
                 cache_path,
@@ -159,8 +224,10 @@ class CLIPCandidateGenerator:
     def _build_text_embeddings(self) -> torch.Tensor:
         prompts = []
         prompt_counts = []
-        for label in self.labels:
-            label_prompts = [self._format_prompt(t, label) for t in self.prompt_templates]
+        for entry in self.label_entries:
+            label = entry["label"]
+            description = entry.get("description")
+            label_prompts = [self._format_prompt(t, label, description) for t in self.prompt_templates]
             prompts.extend(label_prompts)
             prompt_counts.append(len(label_prompts))
 
