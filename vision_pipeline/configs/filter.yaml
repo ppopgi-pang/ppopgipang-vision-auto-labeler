@@ -17,3 +17,9 @@ classifier:
   device: "auto"
   target_class: "toy" # Default fallback
   batch_size: 32  # GPU batch processing (T4 optimized)
+
+dedup:
+  hash_size: 8
+  threshold: 5
+  use_gpu: true
+  gpu_hash_limit: 200000
