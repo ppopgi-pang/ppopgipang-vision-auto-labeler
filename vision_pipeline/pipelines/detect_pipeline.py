@@ -255,23 +255,43 @@ class DetectPipeline(PipelineStep):
                                 for crop_idx, bbox in enumerate(bboxes)
                             }
 
-                            for future in as_completed(futures):
-                                crop_idx = futures[future]
-                                try:
-                                    crop_path_str, labeler_confidence, label, clip_candidates, clip_top1_score, verified, verification_reason, verification_confidence = future.result()
-                                    if crop_path_str:
-                                        crop_paths.append(crop_path_str)
-                                    labeler_confidences[crop_idx] = labeler_confidence
-                                    clip_candidates_list[crop_idx] = clip_candidates
-                                    clip_top1_scores[crop_idx] = clip_top1_score
-                                    verifieds[crop_idx] = verified
-                                    verification_reasons[crop_idx] = verification_reason
-                                    verification_confidences[crop_idx] = verification_confidence
-                                    # 메인 스레드에서 bbox.label 업데이트 (스레드 안전)
-                                    if label:
-                                        bboxes[crop_idx].label = label
-                                except Exception as e:
-                                    print(f"\n[DetectPipeline] 크롭 처리 오류: {e}")
+                            # crop 처리 진척도 표시 (position=2: 객체 탐지 프로그레스바 아래)
+                            with tqdm(
+                                total=len(futures),
+                                desc=f"  크롭 처리 (이미지 {batch_start + idx + 1}/{total})",
+                                unit="crop",
+                                position=2,
+                                leave=False
+                            ) as crop_pbar:
+                                for future in as_completed(futures):
+                                    crop_idx = futures[future]
+                                    try:
+                                        crop_path_str, labeler_confidence, label, clip_candidates, clip_top1_score, verified, verification_reason, verification_confidence = future.result()
+                                        if crop_path_str:
+                                            crop_paths.append(crop_path_str)
+                                        labeler_confidences[crop_idx] = labeler_confidence
+                                        clip_candidates_list[crop_idx] = clip_candidates
+                                        clip_top1_scores[crop_idx] = clip_top1_score
+                                        verifieds[crop_idx] = verified
+                                        verification_reasons[crop_idx] = verification_reason
+                                        verification_confidences[crop_idx] = verification_confidence
+                                        # 메인 스레드에서 bbox.label 업데이트 (스레드 안전)
+                                        if label:
+                                            bboxes[crop_idx].label = label
+
+                                        # 진척도 정보 표시
+                                        status_parts = []
+                                        if clip_candidates:
+                                            status_parts.append("CLIP✓")
+                                        if labeler_confidence is not None:
+                                            status_parts.append(f"LLM✓")
+                                        if verified is not None:
+                                            status_parts.append("검증✓" if verified else "검증✗")
+                                        crop_pbar.set_postfix_str(" ".join(status_parts) if status_parts else "")
+                                        crop_pbar.update(1)
+                                    except Exception as e:
+                                        print(f"\n[DetectPipeline] 크롭 처리 오류: {e}")
+                                        crop_pbar.update(1)
 
                         total_crops_in_batch += len(bboxes)
                     annotated_path = None
