@@ -63,7 +63,7 @@ class DetectPipeline(PipelineStep):
         clip_config = self.config.get("clip_candidate", {})
         if bool(clip_config.get("enabled", False)):
             self.clip_top1_threshold = float(clip_config.get("top1_threshold", 0.55))
-            clip_max_concurrent = int(clip_config.get("max_concurrent", 1))
+            clip_max_concurrent = int(clip_config.get("max_concurrent", 4))
             self.clip_semaphore = Semaphore(max(1, clip_max_concurrent))
             self.clip_candidate_generator = CLIPCandidateGenerator(clip_config)
             if not self.clip_candidate_generator.is_available():
