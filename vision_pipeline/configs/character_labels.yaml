@@ -1,294 +1,66 @@
 labels:
-  # 1-3 Disney Classic
+  # 1 Disney
   - label: "Mickey Mouse"
     description: "black round mouse ears, red shorts with white buttons, white gloves, yellow shoes, black nose"
-  - label: "Minnie Mouse"
-    description: "black round mouse ears, red polka dot bow, red polka dot dress, white gloves, pink shoes"
-  - label: "Donald Duck"
-    description: "white duck, blue sailor hat with black ribbon, blue sailor suit, orange beak and feet, no pants"
-
-  # 4-6 Frozen
-  - label: "Elsa"
-    description: "platinum blonde braid, blue sparkly ice dress, pale skin, ice powers, blue eyes"
-  - label: "Anna"
-    description: "strawberry blonde hair with white streak, green eyes, pink cheeks, braids, green or purple dress"
-  - label: "Olaf"
-    description: "white snowman, carrot nose, stick arms, three black coal buttons, buck teeth, twig hair"
-
-  # 7 Disney Princess
-  - label: "Rapunzel"
-    description: "extremely long golden blonde hair, purple dress, green eyes, barefoot, pink flowers in hair"
-
-  # 8 Stitch
   - label: "Stitch"
     description: "blue alien koala-like creature, big ears, four arms sometimes, large black eyes, pink inside ears"
-
-  # 9-11 Winnie the Pooh
   - label: "Winnie the Pooh"
     description: "yellow bear, red crop top shirt, round belly, no pants, honey pot, small ears"
-  - label: "Piglet"
-    description: "small pink pig, striped pink shirt, very tiny, big ears, timid expression"
-  - label: "Tigger"
-    description: "orange tiger with black stripes, bouncy, spring tail, pink nose, happy expression"
+  - label: "Elsa"
+    description: "platinum blonde braid, blue sparkly ice dress, pale skin, ice powers, blue eyes"
 
-  # 12 Lion King
-  - label: "Simba"
-    description: "golden lion, red mane as adult, orange-brown fur, green eyes, lion cub or adult"
-
-  # 13-15 Toy Story
-  - label: "Buzz"
-    description: "white and green space ranger suit, purple hood, clear helmet, wings, square jaw"
-  - label: "Woody"
-    description: "cowboy hat, yellow plaid shirt, cow print vest, brown boots, pull string, sheriff badge"
-  - label: "Alien"
-    description: "green three-eyed alien, blue suit, antenna, claw machine toy, the claw"
-
-  # 16-17 Monsters Inc
-  - label: "Sulley"
-    description: "large blue furry monster, purple spots, horns, big gentle smile, James P Sullivan"
-  - label: "Mike"
-    description: "round green one-eyed monster, single large eye, small horns, thin arms and legs"
-
-  # 18-19 Nemo/Dory
-  - label: "Nemo"
-    description: "small orange clownfish, white stripes, one small fin, big eyes, black outlines"
-  - label: "Dory"
-    description: "blue tang fish, yellow tail, black markings, forgetful, big smile, Pixar"
-
-  # 20 Big Hero 6
-  - label: "Baymax"
-    description: "large white inflatable robot, round body, black dot eyes, healthcare companion, puffy"
-
-  # 21-23 Disney Princesses
-  - label: "Cinderella"
-    description: "blonde hair in updo, blue ball gown, glass slippers, black choker, blue headband"
-  - label: "Snow White"
-    description: "black short hair with red headband, yellow and blue dress, red lips, pale skin, puffy sleeves"
-  - label: "Ariel"
-    description: "red long hair, green mermaid tail, purple seashell bra, blue eyes, underwater princess"
-
-  # 24 Dumbo
-  - label: "Dumbo"
-    description: "baby elephant, huge floppy ears, blue eyes, small hat, can fly, circus elephant"
-
-  # 25-31 Sanrio
+  # 5-7 Sanrio
   - label: "Hello Kitty"
     description: "white cat, red bow on left ear, no mouth, yellow nose, whiskers, blue overalls"
-  - label: "My Melody"
-    description: "white rabbit, pink hood with ears, pink flower on hood, cute round eyes"
   - label: "Kuromi"
     description: "white rabbit, black jester hood with pink skull, mischievous, purple eyes"
   - label: "Cinnamoroll"
     description: "white puppy, long ears that look like cinnamon rolls, blue eyes, pink cheeks, can fly"
-  - label: "Pompompurin"
-    description: "golden retriever dog, brown beret, brown ears poking out, round body, happy smile"
-  - label: "Pochacco"
-    description: "white dog, black floppy ears, blue eyes, sporty, no headwear, playful"
-  - label: "Gudetama"
-    description: "lazy egg yolk, lying down, unmotivated expression, orange-yellow color, butt showing"
 
-  # 32-36 Ghibli
+  # 8 Ghibli
   - label: "Totoro"
     description: "large gray furry forest spirit, round belly, pointy ears, wide grin, umbrella, whiskers"
-  - label: "Catbus"
-    description: "cat-shaped bus, twelve legs, glowing eyes, fur covered bus, windows for eyes"
-  - label: "Jiji"
-    description: "black cat, yellow eyes, Kiki's companion, sarcastic, can talk, red collar"
-  - label: "No-Face"
-    description: "black transparent spirit, white mask face, can grow large, eats everything, shy"
-  - label: "Ponyo"
-    description: "goldfish girl, red dress, round face, transforms to human, orange hair, loves ham"
 
-  # 37-44 Pokemon
+  # 9-11 Pokemon
   - label: "Pikachu"
     description: "yellow electric mouse, red cheeks, lightning bolt tail, pointed ears with black tips"
   - label: "Eevee"
     description: "brown fluffy fox-like Pokemon, big ears, fluffy tail and neck fur, big eyes"
-  - label: "Charmander"
-    description: "orange lizard Pokemon, flame on tail tip, blue eyes, bipedal, fire type"
-  - label: "Squirtle"
-    description: "blue turtle Pokemon, shell, curly tail, water type, cute smile"
   - label: "Snorlax"
     description: "huge sleeping Pokemon, blue-green body, cream belly, always sleepy, blocks paths"
-  - label: "Mew"
-    description: "small pink cat-like Pokemon, long thin tail, floats, rare mythical, big blue eyes"
-  - label: "Jigglypuff"
-    description: "round pink balloon Pokemon, big blue eyes, curl of hair, microphone, singing"
-  - label: "Ditto"
-    description: "pink blob Pokemon, simple dot eyes, simple curved mouth, can transform"
 
-  # 45-48 Crayon Shin-chan
+  # 12 Crayon Shin-chan
   - label: "Shin-chan"
     description: "young boy, black bowl-cut hair, thick eyebrows, exposed butt gag, mischievous"
-  - label: "Shiro"
-    description: "fluffy white dog, Shin-chan's pet, very fluffy, cute simple face"
-  - label: "Himawari"
-    description: "baby girl, Shin-chan's sister, bow on head, loves handsome men"
-  - label: "Action Mask"
-    description: "superhero, mask on face, Shin-chan's favorite TV hero, justice pose"
 
-  # 49-50 Bonobono
-  - label: "Bonobono"
-    description: "blue sea otter, round body, curious expression, simple face, floating in water"
-  - label: "Chipmunk"
-    description: "small brown chipmunk, energetic, Bonobono's friend, striped back"
-
-  # 51-53 Chiikawa
+  # 13 Chiikawa
   - label: "Chiikawa"
     description: "small white round creature, pink cheeks, tiny body, cute but anxious, simple face"
-  - label: "Hachiware"
-    description: "white and blue cat-like creature, half blue face, happy expression, Chiikawa friend"
-  - label: "Usagi"
-    description: "white rabbit character, long ears, chaotic energy, Chiikawa friend, mischievous"
 
-  # 54-55 How to Train Your Dragon
-  - label: "Toothless"
-    description: "black dragon, green eyes, no visible teeth when closed, Night Fury, retractable teeth"
-  - label: "Light Fury"
-    description: "white sparkly dragon, blue eyes, female Night Fury variant, elegant"
-
-  # 56-59 One Piece
-  - label: "Luffy"
-    description: "straw hat, black messy hair, scar under eye, red vest, rubber powers, big smile"
-  - label: "Zoro"
-    description: "green hair, three swords, scar on eye, white shirt, serious expression, lost easily"
+  # 14 One Piece
   - label: "Chopper"
     description: "small reindeer with blue nose, pink hat with X, can transform, doctor, cute"
-  - label: "Ace"
-    description: "shirtless, fire powers, orange hat, freckles, bead necklace, Luffy's brother"
 
-  # 60-62 Pororo
-  - label: "Pororo"
-    description: "blue penguin, aviator goggles and hat, orange beak, curious, Korean animation"
-  - label: "Crong"
-    description: "small green dinosaur, Pororo's little brother/pet, baby-like, playful"
-  - label: "Eddy"
-    description: "orange fox, inventor, glasses, smart, Pororo's friend, builds things"
+  # 15 Peanuts
+  - label: "Snoopy"
+    description: "white beagle with black ears, red doghouse, pilot fantasies, cool"
 
-  # 63 Mashimaro
-  - label: "Mashimaro"
-    description: "white fat rabbit, mischievous, tube-like body, no visible mouth, Korean character"
+  # 16 Kakao Friends
+  - label: "Ryan"
+    description: "lion without mane, round face, leaf on head, Kakao Friends, expressionless brown bear-like"
 
-  # 64 Miffy
+  # 17 Miffy
   - label: "Miffy"
     description: "white rabbit, simple X mouth, Dutch character, primary colors, Dick Bruna style"
 
-  # 65 Pingu
-  - label: "Pingu"
-    description: "black and white penguin, clay animation, honking sound, Antarctic setting"
+  # 18 How to Train Your Dragon
+  - label: "Toothless"
+    description: "black dragon, green eyes, no visible teeth when closed, Night Fury, retractable teeth"
 
-  # 66-67 SpongeBob
-  - label: "SpongeBob"
-    description: "yellow square sponge, big blue eyes, square pants, buck teeth, holes in body"
-  - label: "Patrick"
-    description: "pink starfish, green shorts with flowers, dumb expression, pointy head"
-
-  # 68-69 Moomin
-  - label: "Moomin"
-    description: "white hippo-like troll, round body, Finnish character, gentle, blue background usually"
-  - label: "Little My"
-    description: "tiny girl with hair bun, red dress, mischievous, fierce, very small"
-
-  # 70-71 LINE Friends
-  - label: "Brown"
-    description: "brown bear, expressionless, simple face, LINE character, stoic"
-  - label: "Cony"
-    description: "white rabbit, expressive, Brown's girlfriend, LINE character, energetic"
-
-  # 72-74 Kakao Friends
-  - label: "Ryan"
-    description: "lion without mane, round face, leaf on head, Kakao Friends, expressionless brown bear-like"
-  - label: "Apeach"
-    description: "pink peach with butt shape, mischievous, Kakao Friends, cute face"
-  - label: "Chunsik"
-    description: "Ryan's friend, white cat-like, simple face, Kakao Friends newer character"
-
-  # 75-76 Mario/Yoshi
-  - label: "Mario"
-    description: "red cap with M, blue overalls, brown mustache, Italian plumber, red shirt"
-  - label: "Yoshi"
-    description: "green dinosaur, red saddle, long tongue, big nose, cute, rideable"
-
-  # 77-78 Kirby
+  # 19 Kirby
   - label: "Kirby"
     description: "pink round puffball, red feet, blue eyes, can inhale and copy abilities"
-  - label: "Waddle Dee"
-    description: "orange round creature, simple face, bandana sometimes, Kirby character"
 
-  # 79-80 Peanuts
-  - label: "Snoopy"
-    description: "white beagle with black ears, red doghouse, pilot fantasies, cool"
-  - label: "Charlie Brown"
-    description: "round headed boy, zigzag shirt, bald with little hair, unlucky, kind"
-
-  # 81 Doraemon
-  - label: "Doraemon"
-    description: "blue robot cat, no ears, 4D pocket, red nose, white belly, bell collar"
-
-  # 82 Anpanman
-  - label: "Anpanman"
-    description: "bread head hero, anpan (red bean bun) for head, cape, gives head to hungry"
-
-  # 83 Thomas
-  - label: "Thomas"
-    description: "blue tank engine, number 1, cheeky face, steam train, Thomas & Friends"
-
-  # 84 Molang
-  - label: "Molang"
-    description: "round white rabbit, very round body, simple face, Korean character, cheerful"
-
-  # 85 Esther Bunny
-  - label: "Esther Bunny"
-    description: "pink bunny, long ears, cute expression, Korean character, feminine"
-
-  # 86 Zanmang Loopy
-  - label: "Zanmang Loopy"
-    description: "pink beaver, round body, cute, Korean character, Pororo spin-off"
-
-  # 87-88 Korean Bus/Car
-  - label: "Tayo"
-    description: "small blue bus, friendly face, Korean animation, city bus, big eyes"
-  - label: "Poli"
-    description: "blue police car robot, transforms, Robocar Poli, leader"
-
-  # 89 Catch Teenieping
-  - label: "Heartsping"
-    description: "fairy character, Catch Teenieping, wings, magical girl theme"
-
-  # 90 Super Wings
-  - label: "Jett"
-    description: "red airplane, Super Wings, main character, transforms to robot"
-
-  # 91 Minions (Bob)
+  # 20 Minions
   - label: "Bob"
     description: "small minion with two different colored eyes, teddy bear, youngest vibe"
-
-  # 92 Dragon Ball
-  - label: "Goku"
-    description: "spiky black hair, orange gi, muscular, Saiyan, Kamehameha pose, Dragon Ball"
-
-  # 93-94 Demon Slayer
-  - label: "Tanjiro"
-    description: "black and red hair, scar on forehead, checkered haori, earrings, kind eyes"
-  - label: "Nezuko"
-    description: "pink kimono, bamboo muzzle in mouth, demon girl, black to orange gradient hair"
-
-  # 95 Naruto
-  - label: "Naruto"
-    description: "blonde spiky hair, orange jumpsuit, whisker marks on cheeks, headband, ninja"
-
-  # 96-98 BT21
-  - label: "Tata"
-    description: "red heart-shaped alien, BT21, stretchy body, expressionless, space theme"
-  - label: "Chimmy"
-    description: "yellow puppy in hoodie, BT21, tongue out, yellow body, playful"
-  - label: "Koya"
-    description: "blue koala, BT21, sleepy, detachable ears, calm, genius"
-
-  # 99 Nongdamgom
-  - label: "Joking Bear"
-    description: "brown teddy bear, Korean character, cute expression, plush toy style"
-
-  # 100 Pat and Mat
-  - label: "Pat and Mat"
-    description: "two men in red and yellow sweaters, flat caps, DIY disasters, stop-motion"
