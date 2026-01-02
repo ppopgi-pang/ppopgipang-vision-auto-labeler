@@ -118,12 +118,6 @@ class DetectPipeline(PipelineStep):
                 elif clip_top1_score is not None and self.clip_top1_threshold is not None and clip_top1_score < self.clip_top1_threshold:
                     label = self.labeler_fallback_label
                 else:
-                    top1_str = f"{clip_top1_score:.3f}" if clip_top1_score is not None else "None"
-                    threshold_str = f"{self.clip_top1_threshold:.3f}" if self.clip_top1_threshold is not None else "None"
-                    print(
-                        f"[DetectPipeline] LLM candidates image_id={img_id} crop_idx={crop_idx} "
-                        f"top1_score={top1_str} threshold={threshold_str} candidates={candidate_labels}"
-                    )
                     with self.api_semaphore:
                         label, labeler_confidence = self.labeler.label_image(crop_img, candidate_labels)
                         if self.labeler_rate_limit_delay > 0:
