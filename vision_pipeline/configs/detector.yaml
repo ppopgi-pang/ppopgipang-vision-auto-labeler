@@ -33,7 +33,7 @@ labeler:
     Respond with JSON only: {"label":"<candidate>", "confidence": <0.0-1.0>}
 
 clip_candidate:
-  enabled: true
+  enabled: false  # 라벨이 10개로 줄어서 비활성화
   model_name: "openai/clip-vit-base-patch32"
   device: "auto"
   top_k: 10
