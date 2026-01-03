@@ -61,6 +61,7 @@ class DetectPipeline(PipelineStep):
                 self.force_fallback_label = True
 
         clip_config = self.config.get("clip_candidate", {})
+        self.all_candidate_labels = None
         if bool(clip_config.get("enabled", False)):
             self.clip_top1_threshold = float(clip_config.get("top1_threshold", 0.55))
             clip_max_concurrent = int(clip_config.get("max_concurrent", 4))
@@ -69,6 +70,23 @@ class DetectPipeline(PipelineStep):
             if not self.clip_candidate_generator.is_available():
                 print("[DetectPipeline] CLIP 후보 생성기를 사용할 수 없습니다. VLM 라벨링을 건너뜁니다.")
                 self.clip_candidate_generator = None
+        else:
+            # CLIP이 비활성화된 경우, 전체 라벨을 후보군으로 사용
+            labels_path = clip_config.get("labels_path")
+            if labels_path:
+                labels_file = project_root / labels_path
+                try:
+                    with open(labels_file) as f:
+                        labels_data = yaml.safe_load(f)
+                    if isinstance(labels_data, dict) and "labels" in labels_data:
+                        label_entries = labels_data["labels"]
+                        self.all_candidate_labels = [
+                            entry["label"] if isinstance(entry, dict) else str(entry)
+                            for entry in label_entries
+                        ]
+                        print(f"[DetectPipeline] CLIP 비활성화: 전체 {len(self.all_candidate_labels)}개 라벨을 후보군으로 사용")
+                except Exception as e:
+                    print(f"[DetectPipeline] 라벨 파일 로드 실패 {labels_file}: {e}")
 
         self.verifier = None
         self.verifier_semaphore = None
@@ -110,21 +128,28 @@ class DetectPipeline(PipelineStep):
                 with self.clip_semaphore:
                     clip_candidates, clip_top1_score = self.clip_candidate_generator.get_candidates(crop_img)
 
-            # 3. VLM 라벨링 (CLIP 후보 기반, 세마포어로 API 호출 제어)
-            if self.labeler and crop_img and clip_candidates:
-                candidate_labels = [c["label"] for c in clip_candidates if c.get("label")]
-                if not candidate_labels:
-                    label = self.labeler_fallback_label
-                elif clip_top1_score is not None and self.clip_top1_threshold is not None and clip_top1_score < self.clip_top1_threshold:
-                    label = self.labeler_fallback_label
-                else:
+            # 3. VLM 라벨링 (CLIP 후보 또는 전체 라벨 기반)
+            candidate_labels = None
+            if self.labeler and crop_img and not self.force_fallback_label:
+                # CLIP 후보가 있으면 사용
+                if clip_candidates:
+                    candidate_labels = [c["label"] for c in clip_candidates if c.get("label")]
+                    # CLIP top1 score가 낮으면 스킵
+                    if clip_top1_score is not None and self.clip_top1_threshold is not None and clip_top1_score < self.clip_top1_threshold:
+                        candidate_labels = None
+                # CLIP이 없지만 전체 라벨이 있으면 사용
+                elif self.all_candidate_labels:
+                    candidate_labels = self.all_candidate_labels
+
+                # VLM 라벨링 실행
+                if candidate_labels:
                     with self.api_semaphore:
                         label, labeler_confidence = self.labeler.label_image(crop_img, candidate_labels)
                         if self.labeler_rate_limit_delay > 0:
                             time.sleep(self.labeler_rate_limit_delay)
+                else:
+                    label = self.labeler_fallback_label
             elif crop_img is None and not self.force_fallback_label:
-                label = self.labeler_fallback_label
-            elif not self.force_fallback_label and self.labeler and crop_img and not clip_candidates:
                 label = self.labeler_fallback_label
 
             # 4. Verifier 검증 (valid/invalid 분기)

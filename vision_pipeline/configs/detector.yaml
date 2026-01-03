@@ -17,7 +17,7 @@ annotated_show_confidence: true
 use_vlm_labeler: true
 labeler_fallback_label: "unknown"
 labeler:
-  model: "gpt-4o"
+  model: "gpt-4o"  # detail:low 사용 시 이미지당 $0.0002 (85 tokens)
   max_tokens: 100
   temperature: 0.0
   rate_limit_delay: 0.0  # Delay between labeler calls (seconds)
@@ -33,7 +33,7 @@ labeler:
     Respond with JSON only: {"label":"<candidate>", "confidence": <0.0-1.0>}
 
 clip_candidate:
-  enabled: true
+  enabled: false  # 라벨이 10개로 줄어서 비활성화
   model_name: "openai/clip-vit-base-patch32"
   device: "auto"
   top_k: 10
@@ -49,7 +49,7 @@ clip_candidate:
 # Verifier (optional verification after labeling)
 verifier:
   enabled: true
-  model: "gpt-4o-mini"
+  model: "gpt-4o"  # detail:low 사용 시 이미지당 $0.0002 (85 tokens)
   max_tokens: 150
   temperature: 0.0
   labeler_confidence_threshold: 0.7  # Skip verification if labeler confidence >= threshold
