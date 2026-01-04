@@ -6,6 +6,9 @@ from modules.crawler.naver import NaverCrawler
 from modules.storage.image_store import ImageStore
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
+import os
+from pathlib import Path
+from config import settings
 
 class CrawlPipeline(PipelineStep):
     def __init__(self):
@@ -13,8 +16,60 @@ class CrawlPipeline(PipelineStep):
         self.naver_crawler = NaverCrawler()
         self.image_store = ImageStore()
 
+    def _has_existing_data(self, raw_dir: str) -> bool:
+        """Check if raw directory has any image files"""
+        if not os.path.exists(raw_dir):
+            return False
+
+        for keyword_dir in os.listdir(raw_dir):
+            keyword_path = os.path.join(raw_dir, keyword_dir)
+            if os.path.isdir(keyword_path):
+                # Check if directory has any image files
+                files = [f for f in os.listdir(keyword_path)
+                        if f.lower().endswith(('.jpg', '.jpeg', '.png', '.webp'))]
+                if files:
+                    return True
+        return False
+
+    def _load_existing_images(self, raw_dir: str) -> list[ImageItem]:
+        """Load existing images from raw directory"""
+        images = []
+
+        for keyword_dir in os.listdir(raw_dir):
+            keyword_path = os.path.join(raw_dir, keyword_dir)
+            if os.path.isdir(keyword_path):
+                # Convert keyword_slug back to keyword (replace _ with space)
+                keyword = keyword_dir.replace("_", " ")
+
+                # Load all image files
+                for filename in os.listdir(keyword_path):
+                    if filename.lower().endswith(('.jpg', '.jpeg', '.png', '.webp')):
+                        filepath = os.path.join(keyword_path, filename)
+                        # Extract ID from filename (remove extension)
+                        image_id = os.path.splitext(filename)[0]
+
+                        item = ImageItem(
+                            id=image_id,
+                            path=Path(filepath),
+                            keyword=keyword,
+                            source="existing"  # Mark as existing data
+                        )
+                        images.append(item)
+
+        print(f"[CrawlPipeline] 기존 이미지 {len(images)}개를 로드했습니다.")
+        return images
+
     def run(self, job: Job) -> list[ImageItem]:
         print(f"CrawlPipeline 실행 중 - job: {job}")
+
+        # Check if raw data already exists
+        raw_dir = os.path.join(settings.output_dir, "raw")
+        if self._has_existing_data(raw_dir):
+            print(f"\n{'='*60}")
+            print(f"[CrawlPipeline] 기존 크롤링 데이터가 발견되었습니다: {raw_dir}")
+            print(f"[CrawlPipeline] 크롤링을 스킵하고 기존 데이터를 로드합니다...")
+            print(f"{'='*60}\n")
+            return self._load_existing_images(raw_dir)
 
         images: list[ImageItem] = []
 
