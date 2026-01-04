@@ -38,11 +38,15 @@ class GoogleCrawler(Crawler):
 
             try:
                 # Google 이미지 검색으로 직접 이동 (더 빠름)
-                search_url = f"https://www.google.com/search?q={keyword}&tbm=isch&hl=ko"
-                page.goto(search_url)
+                from urllib.parse import quote
+                encoded_keyword = quote(keyword)
+                search_url = f"https://www.google.com/search?q={encoded_keyword}&tbm=isch&hl=ko"
+                
+                # 타임아웃을 60초로 늘리고, domcontentloaded로 변경 (더 빠름)
+                page.goto(search_url, timeout=60000, wait_until="domcontentloaded")
 
-                page.wait_for_load_state("networkidle")
-                page.wait_for_timeout(2000)
+                # 이미지가 로드될 때까지 잠시 대기
+                page.wait_for_timeout(3000)
 
                 # 더 많은 이미지를 로드하기 위해 스크롤
                 last_height = page.evaluate("document.body.scrollHeight")
