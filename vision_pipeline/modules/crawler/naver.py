@@ -44,23 +44,37 @@ class NaverCrawler(Crawler):
                 page.wait_for_timeout(2000)
 
                 # 더 많은 이미지를 로드하기 위해 스크롤
+                # 더 많은 이미지를 로드하기 위해 스크롤
                 last_height = page.evaluate("document.body.scrollHeight")
                 scroll_attempts = 0
-                max_scrolls = 100
+                max_scrolls = 500 # 스크롤 제한 대폭 증가
+                no_change_count = 0
+                max_no_change = 3
 
                 while scroll_attempts < max_scrolls:
                     page.keyboard.press("End")
                     page.wait_for_timeout(1000)
 
+                    # 가끔 스크롤을 살짝 올려서 lazy loading 트리거
+                    if scroll_attempts % 10 == 0:
+                        page.mouse.wheel(0, -300)
+                        page.wait_for_timeout(500)
+                        page.keyboard.press("End")
+                        page.wait_for_timeout(1000)
+
                     new_height = page.evaluate("document.body.scrollHeight")
                     if new_height == last_height:
-                        page.wait_for_timeout(1000)
-                        new_height = page.evaluate("document.body.scrollHeight")
-                        if new_height == last_height:
-                            print(f"[NaverCrawler-{keyword}] 페이지 끝에 도달")
+                         no_change_count += 1
+                         if no_change_count >= max_no_change:
+                            print(f"[NaverCrawler-{keyword}] 페이지 끝에 도달 (높이 변화 없음)")
                             break
-
-                    last_height = new_height
+                         else:
+                            print(f"[NaverCrawler-{keyword}] 높이 변화 없음 ({no_change_count}/{max_no_change}), 대기 후 재시도...")
+                            page.wait_for_timeout(2000)
+                    else:
+                        last_height = new_height
+                        no_change_count = 0
+                    
                     scroll_attempts += 1
 
                 # 이미지 URL 추출

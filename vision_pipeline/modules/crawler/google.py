@@ -57,31 +57,80 @@ class GoogleCrawler(Crawler):
                 # 더 많은 이미지를 로드하기 위해 스크롤
                 last_height = page.evaluate("document.body.scrollHeight")
                 scroll_attempts = 0
-                max_scrolls = 100
+                max_scrolls = 500  # 스크롤 제한 대폭 증가
+                no_change_count = 0 
+                max_no_change = 3   # 높이 변화 없음 허용 횟수
 
                 while scroll_attempts < max_scrolls:
                     page.keyboard.press("End")
                     page.wait_for_timeout(1000)
 
+                    # 가끔 스크롤을 살짝 올려서 lazy loading 트리거
+                    if scroll_attempts % 5 == 0:
+                        page.mouse.wheel(0, -500)
+                        page.wait_for_timeout(500)
+                        page.keyboard.press("End")
+                        page.wait_for_timeout(1000)
+
                     # "더 보기" 버튼을 확인하고 표시되면 클릭
                     try:
-                        more_button = page.locator(".mye4qd, input[value='Show more results'], input[type='button'][value='Show more results']")
-                        if more_button.is_visible():
-                            print(f"[GoogleCrawler-{keyword}] '더 보기' 버튼 클릭 중...")
-                            more_button.click()
-                            page.wait_for_timeout(2000)
+                        # 다양한 선택자 시도
+                        more_button_selectors = [
+                            ".mye4qd", 
+                            "input[value='Show more results']", 
+                            "input[type='button'][value='Show more results']",
+                            "div[data-l='Show more results']",
+                            # Browser analysis findings:
+                            "a.T7sFge",  # New Google Images button class
+                            "a[jsname='oHxHid']", # New Google Images button jsname
+                            "span:has-text('Show more results')",
+                            "span:has-text('결과 더보기')",
+                            # Generic text fallback for buttons/links
+                            "a:has-text('Show more results')",
+                            "a:has-text('결과 더보기')",
+                            "div:has-text('결과 더보기')"
+                        ]
+                        
+                        clicked = False
+                        for selector in more_button_selectors:
+                            more_button = page.locator(selector).first
+                            if more_button.is_visible():
+                                print(f"[GoogleCrawler-{keyword}] '더 보기' 버튼 발견 ({selector}), 클릭 중...")
+                                try:
+                                    more_button.click(timeout=3000)
+                                    page.wait_for_timeout(2000)
+                                    clicked = True
+                                    no_change_count = 0 # 버튼 클릭했으면 카운트 초기화
+                                    break
+                                except:
+                                    continue
+                        
+                        if not clicked:
+                            # 한국어 버전 대응 (구형/변형)
+                            more_button_kr = page.locator("input[value='결과 더보기']").first
+                            if more_button_kr.is_visible():
+                                print(f"[GoogleCrawler-{keyword}] '결과 더보기' 버튼 클릭 중...")
+                                more_button_kr.click(timeout=3000)
+                                page.wait_for_timeout(2000)
+                                no_change_count = 0
                     except Exception:
                         pass
 
+
                     new_height = page.evaluate("document.body.scrollHeight")
                     if new_height == last_height:
-                        page.wait_for_timeout(1000)
-                        new_height = page.evaluate("document.body.scrollHeight")
-                        if new_height == last_height:
-                            print(f"[GoogleCrawler-{keyword}] 페이지 끝에 도달")
-                            break
-
-                    last_height = new_height
+                        no_change_count += 1
+                        # 변화가 없어도 바로 종료하지 않고 몇 번 더 시도
+                        if no_change_count >= max_no_change:
+                             print(f"[GoogleCrawler-{keyword}] 페이지 끝에 도달 (높이 변화 없음)")
+                             break
+                        else:
+                             print(f"[GoogleCrawler-{keyword}] 높이 변화 없음 ({no_change_count}/{max_no_change}), 대기 후 재시도...")
+                             page.wait_for_timeout(2000)
+                    else:
+                        last_height = new_height
+                        no_change_count = 0 # 높이 변화 있으면 카운트 초기화
+                    
                     scroll_attempts += 1
 
                 # 이미지 URL 추출
