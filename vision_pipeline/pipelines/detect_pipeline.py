@@ -106,58 +106,56 @@ class DetectPipeline(PipelineStep):
                 print("[DetectPipeline] Verifier를 사용할 수 없습니다. 검증을 건너뜁니다.")
                 self.verifier = None
 
-    def _process_single_crop(self, img_path, bbox, crop_idx, img_id):
-        """단일 크롭을 처리: 생성 → 라벨링 → 저장 (스레드 안전)"""
-        label = bbox.label
+    def _prepare_crop(self, img_path, bbox):
+        """크롭 생성 및 CLIP 후보 수집 (1단계)"""
         crop_img = None
-        labeler_confidence = None
-        crop_path_str = None
         clip_candidates = None
         clip_top1_score = None
 
         try:
-            # 1. 크롭 생성
-            if self.force_fallback_label:
-                label = self.labeler_fallback_label
-
             if self.labeler or self.save_crops:
                 crop_img = crop_image_to_pil(img_path, bbox, padding=self.crop_padding)
 
-            # 2. CLIP 후보 생성
+            # CLIP 후보 생성
             if self.clip_candidate_generator and crop_img and not self.force_fallback_label:
                 with self.clip_semaphore:
                     clip_candidates, clip_top1_score = self.clip_candidate_generator.get_candidates(crop_img)
+        except Exception as e:
+            print(f"\n[DetectPipeline] 크롭 준비 실패 {img_path}: {e}")
+            if crop_img:
+                try:
+                    crop_img.close()
+                except Exception:
+                    pass
+                crop_img = None
 
-            # 3. VLM 라벨링 (CLIP 후보 또는 전체 라벨 기반)
-            candidate_labels = None
-            if self.labeler and crop_img and not self.force_fallback_label:
-                # CLIP 후보가 있으면 사용
-                if clip_candidates:
-                    candidate_labels = [c["label"] for c in clip_candidates if c.get("label")]
-                    # CLIP top1 score가 낮으면 스킵
-                    if clip_top1_score is not None and self.clip_top1_threshold is not None and clip_top1_score < self.clip_top1_threshold:
-                        candidate_labels = None
-                # CLIP이 없지만 전체 라벨이 있으면 사용
-                elif self.all_candidate_labels:
-                    candidate_labels = self.all_candidate_labels
+        return crop_img, clip_candidates, clip_top1_score
 
-                # VLM 라벨링 실행
-                if candidate_labels:
-                    with self.api_semaphore:
-                        label, labeler_confidence = self.labeler.label_image(crop_img, candidate_labels)
-                        if self.labeler_rate_limit_delay > 0:
-                            time.sleep(self.labeler_rate_limit_delay)
-                else:
-                    label = self.labeler_fallback_label
-            elif crop_img is None and not self.force_fallback_label:
-                label = self.labeler_fallback_label
+    def _label_single_crop(self, crop_img, candidate_labels):
+        """단일 크롭 VLM 라벨링 (2단계 - API 호출만, 진짜 병렬 처리)"""
+        if not candidate_labels:
+            return self.labeler_fallback_label, None
 
-            # 4. Verifier 검증 (valid/invalid 분기)
-            verified = None
-            verification_reason = None
-            verification_confidence = None
+        try:
+            with self.api_semaphore:  # Semaphore 30이 이제 의미 있음!
+                label, labeler_confidence = self.labeler.label_image(crop_img, candidate_labels)
+                if self.labeler_rate_limit_delay > 0:
+                    time.sleep(self.labeler_rate_limit_delay)
+                return label, labeler_confidence
+        except Exception as e:
+            print(f"\n[DetectPipeline] VLM 라벨링 실패: {e}")
+            return self.labeler_fallback_label, None
+
+    def _finalize_crop(self, crop_img, label, labeler_confidence, img_path, bbox, crop_idx, img_id):
+        """Verifier 검증 및 크롭 저장 (3단계)"""
+        verified = None
+        verification_reason = None
+        verification_confidence = None
+        crop_path_str = None
+
+        try:
+            # Verifier 검증
             if self.verifier and crop_img and label != self.labeler_fallback_label:
-                # Skip verification if labeler_confidence is high enough
                 skip_verification = False
                 if self.verifier_confidence_threshold is not None and labeler_confidence is not None:
                     if labeler_confidence >= self.verifier_confidence_threshold:
@@ -176,7 +174,7 @@ class DetectPipeline(PipelineStep):
                         if not verified:
                             label = self.labeler_fallback_label
 
-            # 5. 크롭 저장
+            # 크롭 저장
             if self.save_crops:
                 label_clean = "".join(c for c in label if c.isalnum() or c in (" ", "_", "-")).strip()
                 if not label_clean:
@@ -184,8 +182,6 @@ class DetectPipeline(PipelineStep):
 
                 crop_filename = f"{img_id}_{crop_idx}.jpg"
                 crop_path = Path("data/crops") / label_clean / crop_filename
-
-                # 디렉토리 먼저 생성 (crop_img 여부와 관계없이)
                 crop_path.parent.mkdir(parents=True, exist_ok=True)
 
                 if crop_img:
@@ -195,17 +191,10 @@ class DetectPipeline(PipelineStep):
                     success = crop_image(img_path, bbox, crop_path, padding=self.crop_padding)
                     if success:
                         crop_path_str = str(crop_path)
-
         except Exception as e:
-            print(f"\n[DetectPipeline] 크롭 처리 실패 {img_path} (idx={crop_idx}): {e}")
-        finally:
-            if crop_img:
-                try:
-                    crop_img.close()
-                except Exception:
-                    pass
+            print(f"\n[DetectPipeline] 크롭 마무리 실패 {img_path} (idx={crop_idx}): {e}")
 
-        return crop_path_str, labeler_confidence, label, clip_candidates, clip_top1_score, verified, verification_reason, verification_confidence
+        return crop_path_str, label, verified, verification_reason, verification_confidence
 
     def run(self, images: list[ImageItem]) -> list[dict]:
         """
@@ -253,7 +242,7 @@ class DetectPipeline(PipelineStep):
                 # 결과 처리: 모든 이미지에 대해 결과 생성 (path 없는 것도 포함)
                 bbox_map = dict(zip(valid_indices, batch_bboxes))
 
-                # 배치 내 모든 crops를 병렬 처리
+                # 배치 내 모든 crops를 3단계로 병렬 처리
                 total_crops_in_batch = 0
                 for idx, img_item in enumerate(batch_items):
                     bboxes = bbox_map.get(idx, [])
@@ -266,57 +255,133 @@ class DetectPipeline(PipelineStep):
                     verification_confidences = [None] * len(bboxes)
 
                     if bboxes and img_item.path and (self.save_crops or self.labeler or self.force_fallback_label):
-                        # 병렬 처리: 모든 crops를 ThreadPoolExecutor로 처리
-                        max_workers = min(len(bboxes), 10)  # 최대 10개 워커
-                        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                            futures = {
-                                executor.submit(
-                                    self._process_single_crop,
-                                    img_item.path,
-                                    bbox,
-                                    crop_idx,
-                                    img_item.id
-                                ): crop_idx
-                                for crop_idx, bbox in enumerate(bboxes)
-                            }
+                        # === STAGE 1: 모든 크롭 생성 + CLIP 후보 수집 ===
+                        crop_data = []  # (crop_img, bbox, crop_idx, clip_candidates, clip_top1_score)
+                        for crop_idx, bbox in enumerate(bboxes):
+                            if self.force_fallback_label:
+                                # fallback 모드: 크롭만 생성
+                                crop_img = None
+                                if self.save_crops:
+                                    crop_img = crop_image_to_pil(img_item.path, bbox, padding=self.crop_padding)
+                                crop_data.append((crop_img, bbox, crop_idx, None, None))
+                            else:
+                                crop_img, clip_candidates, clip_top1_score = self._prepare_crop(img_item.path, bbox)
+                                crop_data.append((crop_img, bbox, crop_idx, clip_candidates, clip_top1_score))
+                                clip_candidates_list[crop_idx] = clip_candidates
+                                clip_top1_scores[crop_idx] = clip_top1_score
 
-                            # crop 처리 진척도 표시 (position=2: 객체 탐지 프로그레스바 아래)
-                            with tqdm(
-                                total=len(futures),
-                                desc=f"  크롭 처리 (이미지 {batch_start + idx + 1}/{total})",
-                                unit="crop",
-                                position=2,
-                                leave=False
-                            ) as crop_pbar:
-                                for future in as_completed(futures):
-                                    crop_idx = futures[future]
-                                    try:
-                                        crop_path_str, labeler_confidence, label, clip_candidates, clip_top1_score, verified, verification_reason, verification_confidence = future.result()
-                                        if crop_path_str:
-                                            crop_paths.append(crop_path_str)
-                                        labeler_confidences[crop_idx] = labeler_confidence
-                                        clip_candidates_list[crop_idx] = clip_candidates
-                                        clip_top1_scores[crop_idx] = clip_top1_score
-                                        verifieds[crop_idx] = verified
-                                        verification_reasons[crop_idx] = verification_reason
-                                        verification_confidences[crop_idx] = verification_confidence
-                                        # 메인 스레드에서 bbox.label 업데이트 (스레드 안전)
-                                        if label:
-                                            bboxes[crop_idx].label = label
+                        # === STAGE 2: 병렬 VLM 라벨링 (30개 동시 API 호출!) ===
+                        labels = [bbox.label for bbox in bboxes]  # 기본 라벨
+                        if self.labeler and not self.force_fallback_label:
+                            # 라벨링할 크롭만 필터링
+                            labeling_tasks = []
+                            for crop_idx, (crop_img, bbox, _, clip_candidates, clip_top1_score) in enumerate(crop_data):
+                                if not crop_img:
+                                    continue
 
-                                        # 진척도 정보 표시
-                                        status_parts = []
-                                        if clip_candidates:
-                                            status_parts.append("CLIP✓")
-                                        if labeler_confidence is not None:
-                                            status_parts.append(f"LLM✓")
-                                        if verified is not None:
-                                            status_parts.append("검증✓" if verified else "검증✗")
-                                        crop_pbar.set_postfix_str(" ".join(status_parts) if status_parts else "")
-                                        crop_pbar.update(1)
-                                    except Exception as e:
-                                        print(f"\n[DetectPipeline] 크롭 처리 오류: {e}")
-                                        crop_pbar.update(1)
+                                # 후보 라벨 결정
+                                candidate_labels = None
+                                if clip_candidates:
+                                    candidate_labels = [c["label"] for c in clip_candidates if c.get("label")]
+                                    # CLIP top1 score가 낮으면 스킵
+                                    if clip_top1_score is not None and self.clip_top1_threshold is not None and clip_top1_score < self.clip_top1_threshold:
+                                        candidate_labels = None
+                                elif self.all_candidate_labels:
+                                    candidate_labels = self.all_candidate_labels
+
+                                if candidate_labels:
+                                    labeling_tasks.append((crop_idx, crop_img, candidate_labels))
+
+                            # 병렬 라벨링 실행 (ThreadPoolExecutor with 30 workers!)
+                            if labeling_tasks:
+                                llm_max_workers = min(len(labeling_tasks), 30)  # 최대 30개 동시 API 호출
+                                print(f"[DetectPipeline] {len(labeling_tasks)}개 크롭 병렬 라벨링 중 (workers={llm_max_workers})...")
+
+                                with ThreadPoolExecutor(max_workers=llm_max_workers) as llm_executor:
+                                    llm_futures = {
+                                        llm_executor.submit(self._label_single_crop, crop_img, candidates): crop_idx
+                                        for crop_idx, crop_img, candidates in labeling_tasks
+                                    }
+
+                                    # 라벨링 진척도 표시
+                                    with tqdm(
+                                        total=len(llm_futures),
+                                        desc=f"  VLM 라벨링 (이미지 {batch_start + idx + 1}/{total})",
+                                        unit="crop",
+                                        position=2,
+                                        leave=False
+                                    ) as llm_pbar:
+                                        for future in as_completed(llm_futures):
+                                            crop_idx = llm_futures[future]
+                                            try:
+                                                label, labeler_confidence = future.result()
+                                                labels[crop_idx] = label
+                                                labeler_confidences[crop_idx] = labeler_confidence
+                                                llm_pbar.set_postfix_str(f"LLM✓ conf={labeler_confidence:.2f}" if labeler_confidence else "LLM✓")
+                                                llm_pbar.update(1)
+                                            except Exception as e:
+                                                print(f"\n[DetectPipeline] VLM 라벨링 오류 (crop {crop_idx}): {e}")
+                                                llm_pbar.update(1)
+
+                        # === STAGE 3: Verifier + 크롭 저장 ===
+                        finalize_tasks = []
+                        for crop_idx, (crop_img, bbox, _, _, _) in enumerate(crop_data):
+                            label = labels[crop_idx]
+                            labeler_confidence = labeler_confidences[crop_idx]
+                            finalize_tasks.append((crop_idx, crop_img, label, labeler_confidence, bbox))
+
+                        # Verifier와 저장을 병렬 처리
+                        if finalize_tasks:
+                            finalize_max_workers = min(len(finalize_tasks), 10)
+                            with ThreadPoolExecutor(max_workers=finalize_max_workers) as finalize_executor:
+                                finalize_futures = {
+                                    finalize_executor.submit(
+                                        self._finalize_crop,
+                                        crop_img, label, labeler_confidence,
+                                        img_item.path, bbox, crop_idx, img_item.id
+                                    ): crop_idx
+                                    for crop_idx, crop_img, label, labeler_confidence, bbox in finalize_tasks
+                                }
+
+                                # 마무리 진척도 표시
+                                with tqdm(
+                                    total=len(finalize_futures),
+                                    desc=f"  저장/검증 (이미지 {batch_start + idx + 1}/{total})",
+                                    unit="crop",
+                                    position=2,
+                                    leave=False
+                                ) as finalize_pbar:
+                                    for future in as_completed(finalize_futures):
+                                        crop_idx = finalize_futures[future]
+                                        try:
+                                            crop_path_str, final_label, verified, verification_reason, verification_confidence = future.result()
+                                            if crop_path_str:
+                                                crop_paths.append(crop_path_str)
+                                            labels[crop_idx] = final_label
+                                            verifieds[crop_idx] = verified
+                                            verification_reasons[crop_idx] = verification_reason
+                                            verification_confidences[crop_idx] = verification_confidence
+
+                                            # 메인 스레드에서 bbox.label 업데이트
+                                            bboxes[crop_idx].label = final_label
+
+                                            # 진척도 정보 표시
+                                            status_parts = []
+                                            if verified is not None:
+                                                status_parts.append("검증✓" if verified else "검증✗")
+                                            finalize_pbar.set_postfix_str(" ".join(status_parts) if status_parts else "저장✓")
+                                            finalize_pbar.update(1)
+                                        except Exception as e:
+                                            print(f"\n[DetectPipeline] 마무리 오류 (crop {crop_idx}): {e}")
+                                            finalize_pbar.update(1)
+
+                        # 크롭 이미지 메모리 해제
+                        for crop_img, _, _, _, _ in crop_data:
+                            if crop_img:
+                                try:
+                                    crop_img.close()
+                                except Exception:
+                                    pass
 
                         total_crops_in_batch += len(bboxes)
                     annotated_path = None
