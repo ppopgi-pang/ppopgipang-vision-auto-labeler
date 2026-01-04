@@ -1,4 +1,5 @@
 import yaml
+import os
 from pathlib import Path
 from tqdm import tqdm
 from domain.job import Job
@@ -6,6 +7,8 @@ from pipelines.crawl_pipeline import CrawlPipeline
 from pipelines.filter_pipeline import FilterPipeline
 from pipelines.detect_pipeline import DetectPipeline
 from pipelines.verify_pipeline import VerifyPipeline
+from modules.storage.image_store import ImageStore
+from config import settings
 
 class PipelineRunner:
     def __init__(self, config_path: str = "configs/pipeline.yaml"):
@@ -56,10 +59,31 @@ class PipelineRunner:
 
             # 1. 크롤링
             if self.stage_config.get("crawl", True):
-                pbar.set_description("단계 1/4: 크롤링")
-                self._update_job_status(job, "crawling")
-                images = self.crawl_pipeline.run(job)
-                pbar.update(1)
+                # raw 디렉토리가 이미 존재하는지 확인
+                raw_dir = os.path.join(settings.output_dir, "raw")
+                if os.path.exists(raw_dir) and os.path.isdir(raw_dir):
+                    # 파일 수 확인
+                    raw_files = []
+                    for root, dirs, files in os.walk(raw_dir):
+                        raw_files.extend([f for f in files if os.path.isfile(os.path.join(root, f))])
+
+                    if raw_files:
+                        print(f"\n[INFO] {raw_dir} 디렉토리가 존재합니다 ({len(raw_files)}개 파일).")
+                        print("[INFO] 크롤링 단계를 스킵하고 기존 데이터로 파이프라인을 진행합니다.")
+                        self._update_job_status(job, "crawling_skipped")
+                        image_store = ImageStore()
+                        images = image_store.load_raw()
+                        pbar.update(1)
+                    else:
+                        pbar.set_description("단계 1/4: 크롤링")
+                        self._update_job_status(job, "crawling")
+                        images = self.crawl_pipeline.run(job)
+                        pbar.update(1)
+                else:
+                    pbar.set_description("단계 1/4: 크롤링")
+                    self._update_job_status(job, "crawling")
+                    images = self.crawl_pipeline.run(job)
+                    pbar.update(1)
 
                 if not images:
                     self._update_job_status(job, "stopped_no_images")

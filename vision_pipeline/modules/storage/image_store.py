@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from config import settings
+import glob
 
 class ImageStore:
     def _download_one(self, item: ImageItem, index: int, total: int) -> bool:
@@ -64,3 +65,41 @@ class ImageStore:
                     saved_count += 1
 
         print(f"[ImageStore] Saved {saved_count}/{total} raw images")
+
+    def load_raw(self) -> list[ImageItem]:
+        """raw 디렉토리에서 기존 이미지를 로드"""
+        raw_dir = os.path.join(settings.output_dir, "raw")
+
+        if not os.path.exists(raw_dir):
+            print("[ImageStore] No raw directory found")
+            return []
+
+        images: list[ImageItem] = []
+
+        # raw 디렉토리 내의 모든 하위 디렉토리(키워드별) 탐색
+        for keyword_dir in os.listdir(raw_dir):
+            keyword_path = os.path.join(raw_dir, keyword_dir)
+
+            if not os.path.isdir(keyword_path):
+                continue
+
+            # 키워드 복원 (언더스코어를 공백으로)
+            keyword = keyword_dir.replace("_", " ")
+
+            # 디렉토리 내 모든 이미지 파일 찾기
+            image_files = glob.glob(os.path.join(keyword_path, "*.*"))
+
+            for image_file in image_files:
+                # 파일명에서 ID 추출 (확장자 제거)
+                file_id = os.path.splitext(os.path.basename(image_file))[0]
+
+                item = ImageItem(
+                    id=file_id,
+                    keyword=keyword,
+                    url="",  # 로컬 파일이므로 URL 없음
+                    path=Path(image_file)
+                )
+                images.append(item)
+
+        print(f"[ImageStore] Loaded {len(images)} images from raw directory")
+        return images
