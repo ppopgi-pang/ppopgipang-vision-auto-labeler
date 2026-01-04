@@ -64,7 +64,8 @@ class LLMVerifier:
                             {
                                 "type": "image_url",
                                 "image_url": {
-                                    "url": f"data:image/jpeg;base64,{base64_image}"
+                                    "url": f"data:image/jpeg;base64,{base64_image}",
+                                    "detail": "low"  # 85 tokens, $0.0002 per image (gpt-4o)
                                 }
                             }
                         ]
@@ -123,7 +124,8 @@ class LLMVerifier:
                             {
                                 "type": "image_url",
                                 "image_url": {
-                                    "url": f"data:image/jpeg;base64,{base64_image}"
+                                    "url": f"data:image/jpeg;base64,{base64_image}",
+                                    "detail": "low"  # 85 tokens, $0.0002 per image (gpt-4o)
                                 }
                             }
                         ]
@@ -182,7 +184,8 @@ class LLMVerifier:
                             {
                                 "type": "image_url",
                                 "image_url": {
-                                    "url": f"data:image/jpeg;base64,{base64_image}"
+                                    "url": f"data:image/jpeg;base64,{base64_image}",
+                                    "detail": "low"  # 85 tokens, $0.0002 per image (gpt-4o)
                                 }
                             }
                         ]

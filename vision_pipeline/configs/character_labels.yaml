@@ -4,63 +4,33 @@ labels:
     description: "black round mouse ears, red shorts with white buttons, white gloves, yellow shoes, black nose"
   - label: "Stitch"
     description: "blue alien koala-like creature, big ears, four arms sometimes, large black eyes, pink inside ears"
-  - label: "Winnie the Pooh"
-    description: "yellow bear, red crop top shirt, round belly, no pants, honey pot, small ears"
-  - label: "Elsa"
-    description: "platinum blonde braid, blue sparkly ice dress, pale skin, ice powers, blue eyes"
 
-  # 5-7 Sanrio
+  # 3 Sanrio
   - label: "Hello Kitty"
     description: "white cat, red bow on left ear, no mouth, yellow nose, whiskers, blue overalls"
   - label: "Kuromi"
     description: "white rabbit, black jester hood with pink skull, mischievous, purple eyes"
-  - label: "Cinnamoroll"
-    description: "white puppy, long ears that look like cinnamon rolls, blue eyes, pink cheeks, can fly"
 
-  # 8 Ghibli
+  # 5 Ghibli
   - label: "Totoro"
     description: "large gray furry forest spirit, round belly, pointy ears, wide grin, umbrella, whiskers"
 
-  # 9-11 Pokemon
+  # 6 Pokemon
   - label: "Pikachu"
     description: "yellow electric mouse, red cheeks, lightning bolt tail, pointed ears with black tips"
-  - label: "Eevee"
-    description: "brown fluffy fox-like Pokemon, big ears, fluffy tail and neck fur, big eyes"
-  - label: "Snorlax"
-    description: "huge sleeping Pokemon, blue-green body, cream belly, always sleepy, blocks paths"
 
-  # 12 Crayon Shin-chan
+  # 7 Crayon Shin-chan
   - label: "Shin-chan"
     description: "young boy, black bowl-cut hair, thick eyebrows, exposed butt gag, mischievous"
 
-  # 13 Chiikawa
+  # 8 Chiikawa
   - label: "Chiikawa"
     description: "small white round creature, pink cheeks, tiny body, cute but anxious, simple face"
 
-  # 14 One Piece
-  - label: "Chopper"
-    description: "small reindeer with blue nose, pink hat with X, can transform, doctor, cute"
-
-  # 15 Peanuts
+  # 9 Peanuts
   - label: "Snoopy"
     description: "white beagle with black ears, red doghouse, pilot fantasies, cool"
 
-  # 16 Kakao Friends
-  - label: "Ryan"
-    description: "lion without mane, round face, leaf on head, Kakao Friends, expressionless brown bear-like"
-
-  # 17 Miffy
-  - label: "Miffy"
-    description: "white rabbit, simple X mouth, Dutch character, primary colors, Dick Bruna style"
-
-  # 18 How to Train Your Dragon
-  - label: "Toothless"
-    description: "black dragon, green eyes, no visible teeth when closed, Night Fury, retractable teeth"
-
-  # 19 Kirby
-  - label: "Kirby"
-    description: "pink round puffball, red feet, blue eyes, can inhale and copy abilities"
-
-  # 20 Minions
-  - label: "Bob"
-    description: "small minion with two different colored eyes, teddy bear, youngest vibe"
+  # 10 Minions
+  - label: "Minions"
+    description: "yellow pill-shaped creatures, blue overalls, goggles, gibberish language, banana lovers"
